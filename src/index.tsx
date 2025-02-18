@@ -1,7 +1,6 @@
 import { generateObject } from "ai";
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { HTTPException } from "hono/http-exception";
 import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
@@ -9,12 +8,11 @@ import type { Env } from "./bindings";
 import {
 	CreateResearch,
 	Layout,
+	ListResearches,
 	NewResearchQuestions,
-	ResearchDetails,
-	ResearchList,
-} from "./layout/templates";
+} from "./layouts";
 import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
-import type { ResearchType, ResearchTypeDB } from "./types";
+import type { ResearchType } from "./types";
 import { getModel } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
@@ -24,32 +22,29 @@ const app = new Hono<{ Bindings: Env }>();
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
 	const researches = await qb
-		.select<ResearchTypeDB>("researches")
+		.select<ResearchType>("researches")
 		.orderBy("created_at desc")
 		.all();
 
 	return c.html(
 		<Layout>
-			<ResearchList researches={researches} />
-		</Layout>,
-	);
-});
+			<h1 className="mb-4">Researches</h1>
+			<ListResearches researches={researches} />
 
-app.get("/create", async (c) => {
-	return c.html(
-		<Layout>
+			<hr />
+
 			<CreateResearch />
 		</Layout>,
 	);
 });
 
-app.post("/create", async (c) => {
-	const form = await c.req.formData();
+app.get("/create", async (c) => {
+	const url = new URL(c.req.url);
 
 	const research = {
-		query: form.get("query") as string,
-		depth: form.get("depth") as string,
-		breadth: form.get("breadth") as string,
+		query: url.searchParams.get("query") as string,
+		depth: url.searchParams.get("depth") as string,
+		breadth: url.searchParams.get("breadth") as string,
 	};
 
 	const { object } = await generateObject({
@@ -75,12 +70,13 @@ app.post("/create", async (c) => {
 
 	return c.html(
 		<Layout>
+			<h1 className="mb-4">New Research</h1>
 			<NewResearchQuestions research={research} questions={questions} />
 		</Layout>,
 	);
 });
 
-app.post("/create/finish", async (c) => {
+app.post("/create", async (c) => {
 	const id = crypto.randomUUID();
 	const form = await c.req.formData();
 
@@ -120,12 +116,12 @@ app.post("/create/finish", async (c) => {
 	return c.redirect("/");
 });
 
-app.get("/details/:id", async (c) => {
+app.get("/read/:id", async (c) => {
 	const id = c.req.param("id");
 
 	const qb = new D1QB(c.env.DB);
 	const resp = await qb
-		.fetchOne<ResearchTypeDB>({
+		.fetchOne<ResearchType>({
 			tableName: "researches",
 			where: {
 				conditions: "id = ?",
@@ -134,25 +130,16 @@ app.get("/details/:id", async (c) => {
 		})
 		.execute();
 
-	if (!resp.results) {
-		throw new HTTPException(404, { message: "research not found" });
+	if (!resp || !resp.results.result) {
+		throw new Error("404");
 	}
 
-	const content = (resp.results.result ?? "Report is still running...")
+	const content = resp.results.result
 		.replaceAll("```markdown", "")
 		.replaceAll("```", "");
 
-	const research = {
-		...resp.results,
-		questions: JSON.parse(resp.results.questions as unknown as string),
-		report_html: await marked.parse(content),
-	};
-
-	return c.html(
-		<Layout>
-			<ResearchDetails research={research} />
-		</Layout>,
-	);
+	// @ts-ignore
+	return c.html(<Layout>{html(marked.parse(content))}</Layout>);
 });
 
 app.post("/re-run", async (c) => {
@@ -160,7 +147,7 @@ app.post("/re-run", async (c) => {
 
 	const qb = new D1QB(c.env.DB);
 	const resp = await qb
-		.fetchOne<ResearchTypeDB>({
+		.fetchOne<ResearchType>({
 			tableName: "researches",
 			where: {
 				conditions: "id = ?",
@@ -170,7 +157,7 @@ app.post("/re-run", async (c) => {
 		.execute();
 
 	if (!resp) {
-		throw new HTTPException(404, { message: "research not found" });
+		throw new Error("404");
 	}
 
 	const obj: ResearchType = {
@@ -193,37 +180,6 @@ app.post("/re-run", async (c) => {
 			data: {
 				...obj,
 				questions: JSON.stringify(obj.questions),
-			},
-		})
-		.execute();
-
-	return c.redirect("/");
-});
-
-app.post("/delete", async (c) => {
-	const form = await c.req.formData();
-
-	const qb = new D1QB(c.env.DB);
-	const resp = await qb
-		.fetchOne<ResearchTypeDB>({
-			tableName: "researches",
-			where: {
-				conditions: "id = ?",
-				params: form.get("id") as string,
-			},
-		})
-		.execute();
-
-	if (!resp) {
-		throw new HTTPException(404, { message: "research not found" });
-	}
-
-	await qb
-		.delete({
-			tableName: "researches",
-			where: {
-				conditions: "id = ?",
-				params: form.get("id") as string,
 			},
 		})
 		.execute();
