@@ -7,6 +7,13 @@ workers_dev = true
 [observability]
 enabled = true
 
+[build]
+command = "npm run build-css"
+watch_dir = "./src"
+
+[assets]
+directory = "./assets"
+
 [[workflows]]
 name = "workers-reseacher-workflow"
 binding = "RESEARCH_WORKFLOW"

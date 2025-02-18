@@ -140,13 +140,13 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
 ## Images
 
 Home page
-![homepage](https://github.com/G4brym/workers-research/raw/main/images/home.png)
+![homepage](https://github.com/G4brym/workers-research/raw/main/assets/images/home.png)
 
 New Research follow up questions
-![homepage](https://github.com/G4brym/workers-research/raw/main/images/new-research.png)
+![homepage](https://github.com/G4brym/workers-research/raw/main/assets/images/new-research.png)
 
 Reading a report
-![homepage](https://github.com/G4brym/workers-research/raw/main/images/report.png)
+![homepage](https://github.com/G4brym/workers-research/raw/main/assets/images/report.png)
 
 
 ## 📜 License

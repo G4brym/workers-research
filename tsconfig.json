@@ -24,8 +24,6 @@
 			"es2022"
 		],
 		"types": [
-			"@types/node",
-			"@types/service-worker-mock",
 			"@cloudflare/workers-types/experimental"
 		]
 	},

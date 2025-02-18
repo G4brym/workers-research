@@ -10,7 +10,7 @@ import {
 	Layout,
 	ListResearches,
 	NewResearchQuestions,
-} from "./layouts";
+} from "./layout/templates";
 import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
 import { getModel } from "./utils";

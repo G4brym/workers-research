@@ -1,5 +1,5 @@
 import type { FC } from "hono/jsx";
-import type { ResearchType } from "./types";
+import type { ResearchType } from "../types";
 
 export const Layout: FC = (props) => {
 	return (
@@ -7,15 +7,11 @@ export const Layout: FC = (props) => {
 			<head>
 				<meta charset="UTF-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-				<link
-					rel="stylesheet"
-					href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
-				/>
+				<link href="/styles.css" rel="stylesheet" />
 				<title>Research Dashboard</title>
 			</head>
 			<body>
 				<div className="container py-4">{props.children}</div>
-				<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" />
 			</body>
 		</html>
 	);

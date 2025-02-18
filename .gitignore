@@ -131,3 +131,4 @@ dist
 .dev.vars
 .wrangler
 .idea
+assets/styles.css

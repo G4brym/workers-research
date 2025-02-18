@@ -11,6 +11,7 @@
 	],
 	"scripts": {
 		"build": "tsup src/index.ts --format cjs,esm --external cloudflare:workers",
+		"build-css": "npx @tailwindcss/cli -i ./src/layout/index.css -o ./assets/styles.css",
 		"lint": "npx @biomejs/biome check src/ || (npx @biomejs/biome check --write src/; exit 1)"
 	},
 	"publishConfig": {
@@ -30,7 +31,8 @@
 		"@biomejs/biome": "1.9.4",
 		"@cloudflare/vitest-pool-workers": "^0.6.12",
 		"@cloudflare/workers-types": "^4.20250204.0",
-		"tsup": "^8.3.6",
+		"@tailwindcss/cli": "^4.0.7",
+		"tailwindcss": "^4.0.7",
 		"typescript": "^5.7.3",
 		"vitest": "2.1.9",
 		"wrangler": "^3.107.3"
