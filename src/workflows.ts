@@ -184,12 +184,16 @@ async function writeFinalReport({
 
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
+		console.log("Starting workflow");
+
 		const { query, questions, breadth, depth, id } = event.payload;
 		const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
 			.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
 			.join("\n")}`;
 
 		const firecrawl = new FirecrawlApp({ apiKey: this.env.FIRECRAWL_API_KEY });
+
+		console.log("Starting research...");
 		const researchResult = await step.do("do research", () =>
 			deepResearch({
 				step,
@@ -203,6 +207,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			}),
 		);
 
+		console.log("Generating report");
 		const report = await step.do("generate report", () =>
 			writeFinalReport({
 				env: this.env,
@@ -221,6 +226,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			})
 			.execute();
 
+		console.log("Workflow finished!");
 		return researchResult;
 	}
 }

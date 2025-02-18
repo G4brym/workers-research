@@ -1,36 +1,21 @@
 import { generateObject } from "ai";
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { FC } from "hono/jsx";
 import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env } from "./bindings";
+import {
+	CreateResearch,
+	Layout,
+	ListResearches,
+	NewResearchQuestions,
+} from "./layouts";
 import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
 import { getModel } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
-
-const Layout: FC = (props) => {
-	return (
-		<html lang="en">
-			<head>
-				<meta charset="UTF-8" />
-				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-				<link
-					rel="stylesheet"
-					href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
-				/>
-				<title>Research Dashboard</title>
-			</head>
-			<body>
-				<div className="container py-4">{props.children}</div>
-				<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" />
-			</body>
-		</html>
-	);
-};
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -44,107 +29,11 @@ app.get("/", async (c) => {
 	return c.html(
 		<Layout>
 			<h1 className="mb-4">Researches</h1>
+			<ListResearches researches={researches} />
 
-			<div className="table-responsive mb-4">
-				<table className="table table-striped table-hover">
-					<thead className="table-dark">
-						<tr>
-							<th>ID</th>
-							<th>Query</th>
-							<th>Depth</th>
-							<th>Breadth</th>
-							<th>Status</th>
-							<th>Created At</th>
-							<th>Actions</th>
-							<th />
-						</tr>
-					</thead>
-					<tbody>
-						{(researches.results as ResearchType[]).map((obj) => (
-							<tr>
-								<td>{obj.id}</td>
-								<td>{obj.query}</td>
-								<td>{obj.depth}</td>
-								<td>{obj.breadth}</td>
-								<td>
-									<span
-										className={`badge ${obj.status === 1 ? "bg-warning" : "bg-success"}`}
-									>
-										{obj.status === 1 ? "Running" : "Complete"}
-									</span>
-								</td>
-								<td>{obj.created_at}</td>
-								<td className="">
-									<form action="/re-run" method="post">
-										<input name="id" value={obj.id} type="hidden" />
-										<button
-											className="btn btn-outline-primary btn-sm"
-											type="submit"
-										>
-											🔄
-										</button>
-									</form>
-								</td>
-								<td>
-									{obj.status === 2 && (
-										<a
-											href={"/read/" + obj.id}
-											className="btn btn-outline-success btn-sm"
-										>
-											Read
-										</a>
-									)}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			<hr />
 
-			<hr className="my-4" />
-
-			<div className="card">
-				<div className="card-header">
-					<h5 className="card-title mb-0">Create New Research</h5>
-				</div>
-				<div className="card-body">
-					<form action="/create" method="get">
-						<div className="mb-3">
-							<label htmlFor="query" className="form-label">
-								Query:
-							</label>
-							<input name="query" className="form-control" required />
-						</div>
-						<div className="mb-3">
-							<label htmlFor="depth" className="form-label">
-								Depth:
-							</label>
-							<input
-								value="3"
-								name="depth"
-								type="number"
-								className="form-control"
-								required
-							/>
-						</div>
-						<div className="mb-3">
-							<label htmlFor="breadth" className="form-label">
-								Breadth:
-							</label>
-							<input
-								value="4"
-								name="breadth"
-								type="number"
-								className="form-control"
-								required
-							/>
-						</div>
-						<button type="submit" className="btn btn-primary">
-							Continue with creation
-						</button>
-					</form>
-				</div>
-			</div>
+			<CreateResearch />
 		</Layout>,
 	);
 });
@@ -152,7 +41,7 @@ app.get("/", async (c) => {
 app.get("/create", async (c) => {
 	const url = new URL(c.req.url);
 
-	const obj = {
+	const research = {
 		query: url.searchParams.get("query") as string,
 		depth: url.searchParams.get("depth") as string,
 		breadth: url.searchParams.get("breadth") as string,
@@ -164,7 +53,7 @@ app.get("/create", async (c) => {
 			{ role: "system", content: FOLLOWUP_QUESTIONS_PROMPT() },
 			{
 				role: "user",
-				content: obj.query,
+				content: research.query,
 			},
 		],
 		schema: z.object({
@@ -181,36 +70,8 @@ app.get("/create", async (c) => {
 
 	return c.html(
 		<Layout>
-			<div className="card">
-				<div className="card-header">
-					<h5 className="card-title mb-0">New Research</h5>
-				</div>
-				<div className="card-body">
-					<p className="card-text mb-4">
-						Initial Query: <strong>{obj.query}</strong>
-					</p>
-
-					<form action="/create" method="post">
-						<input name="query" value={obj.query} type="hidden" />
-						<input name="breadth" value={obj.breadth} type="hidden" />
-						<input name="depth" value={obj.depth} type="hidden" />
-
-						{questions.map((obj) => (
-							<div className="mb-3">
-								<label for="answer" className="form-label">
-									{obj}
-								</label>
-								<input name="question" value={obj} type="hidden" />
-								<input name="answer" className="form-control" required />
-							</div>
-						))}
-
-						<button type="submit" className="btn btn-primary">
-							Create new Research
-						</button>
-					</form>
-				</div>
-			</div>
+			<h1 className="mb-4">New Research</h1>
+			<NewResearchQuestions research={research} questions={questions} />
 		</Layout>,
 	);
 });
@@ -253,6 +114,32 @@ app.post("/create", async (c) => {
 		.execute();
 
 	return c.redirect("/");
+});
+
+app.get("/read/:id", async (c) => {
+	const id = c.req.param("id");
+
+	const qb = new D1QB(c.env.DB);
+	const resp = await qb
+		.fetchOne<ResearchType>({
+			tableName: "researches",
+			where: {
+				conditions: "id = ?",
+				params: id,
+			},
+		})
+		.execute();
+
+	if (!resp || !resp.results.result) {
+		throw new Error("404");
+	}
+
+	const content = resp.results.result
+		.replaceAll("```markdown", "")
+		.replaceAll("```", "");
+
+	// @ts-ignore
+	return c.html(<Layout>{html(marked.parse(content))}</Layout>);
 });
 
 app.post("/re-run", async (c) => {
@@ -298,32 +185,6 @@ app.post("/re-run", async (c) => {
 		.execute();
 
 	return c.redirect("/");
-});
-
-app.get("/read/:id", async (c) => {
-	const id = c.req.param("id");
-
-	const qb = new D1QB(c.env.DB);
-	const resp = await qb
-		.fetchOne<ResearchType>({
-			tableName: "researches",
-			where: {
-				conditions: "id = ?",
-				params: id,
-			},
-		})
-		.execute();
-
-	if (!resp || !resp.results.result) {
-		throw new Error("404");
-	}
-
-	const content = resp.results.result
-		.replaceAll("```markdown", "")
-		.replaceAll("```", "");
-
-	// @ts-ignore
-	return c.html(<Layout>{html(marked.parse(content))}</Layout>);
 });
 
 export default app;
