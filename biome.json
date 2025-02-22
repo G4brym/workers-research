@@ -37,6 +37,9 @@
 				"noStaticOnlyClass": "off",
 				"noBannedTypes": "off"
 			},
+			"a11y": {
+				"useButtonType": "off"
+			},
 			"correctness": {"useJsxKeyInIterable": "off"}
 		}
 	},

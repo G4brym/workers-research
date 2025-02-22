@@ -11,3 +11,14 @@ export type ResearchType = {
 	result?: string;
 	created_at?: string;
 };
+
+export type ResearchTypeDB = {
+	id: string;
+	query: string;
+	depth: string;
+	breadth: string;
+	status: number;
+	questions: string;
+	result?: string;
+	created_at?: string;
+};
