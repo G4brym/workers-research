@@ -1,17 +1,35 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import {
+	type GoogleGenerativeAIProvider,
+	createGoogleGenerativeAI,
+} from "@ai-sdk/google";
 import type { Env } from "./bindings";
 
-export function getModel(env: Env) {
-	const google = createGoogleGenerativeAI({
+function getGoogleProvider(env: Env): GoogleGenerativeAIProvider {
+	const args = {
 		apiKey: env.GOOGLE_API_KEY,
-	});
+	};
+
+	if (env.AI_GATEWAY_ACCOUNT_ID && env.AI_GATEWAY_NAME) {
+		args["baseURL"] =
+			`https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/google-ai-studio/v1beta`;
+
+		if (env.AI_GATEWAY_API_KEY) {
+			args["headers"] = {
+				"cf-aig-authorization": `Bearer ${env.AI_GATEWAY_API_KEY}`,
+			};
+		}
+	}
+
+	return createGoogleGenerativeAI(args);
+}
+
+export function getModel(env: Env) {
+	const google = getGoogleProvider(env);
 
 	return google("gemini-2.0-flash-001");
 }
 export function getModelThinking(env: Env) {
-	const google = createGoogleGenerativeAI({
-		apiKey: env.GOOGLE_API_KEY,
-	});
+	const google = getGoogleProvider(env);
 
 	return google("gemini-2.0-flash-thinking-exp-01-21");
 }

@@ -60,6 +60,7 @@ accessible and easier to deploy.
 - **Browser Rendering:**  Web crawling API used to gather information from the internet.
 - **Google Gemini 2.0:**  The cutting-edge language model from Google AI, responsible for generating research reports
   and insights.
+- **Cloudflare AI Gateway:** Optional proxy for AI requests, providing caching and enhanced management capabilities.
 - **Hono:**  A lightweight web framework for Cloudflare Workers, used for building the dashboard and API endpoints.
 - **workers-qb:**  A lightweight query builder for Cloudflare D1, simplifying database interactions.
 
@@ -123,7 +124,23 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
      npx wrangler secret put GOOGLE_API_KEY
      ```
 
-8. **Access the Dashboard:**
+8. **(Optional) Configure Cloudflare AI Gateway:**
+   - Create an AI Gateway in your Cloudflare account dashboard.
+   - Configure the gateway with your preferred settings.
+   - Set the required environment variables:
+
+     ```bash
+     npx wrangler secret put AI_GATEWAY_NAME
+     npx wrangler secret put AI_GATEWAY_ACCOUNT_ID
+     ```
+
+   - If your gateway has authentication enabled, also set the API key:
+
+     ```bash
+     npx wrangler secret put AI_GATEWAY_API_KEY
+     ```
+
+9. **Access the Dashboard:**
    Open your deployed worker URL (e.g., `https://workers-research.{your-user}.workers.dev`) in your browser to access
    the research dashboard.
 
