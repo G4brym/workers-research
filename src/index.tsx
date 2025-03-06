@@ -1,11 +1,10 @@
 import { generateObject } from "ai";
 import { Hono } from "hono";
-import { html } from "hono/html";
 import { HTTPException } from "hono/http-exception";
 import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
-import type { Env } from "./bindings";
+import type { Env, Variables } from "./bindings";
 import {
 	CreateResearch,
 	Layout,
@@ -19,17 +18,26 @@ import { getModel } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
 
-const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+app.use("*", async (c, next) => {
+	if (!c.get("user")) c.set("user", "unknown");
+
+	await next();
+});
 
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
 	const researches = await qb
 		.select<ResearchTypeDB>("researches")
+		.where("user = ?", c.get("user"))
 		.orderBy("created_at desc")
 		.all();
 
+	const res = researches.results;
+
 	return c.html(
-		<Layout>
+		<Layout user={c.get("user")}>
 			<ResearchList researches={researches} />
 		</Layout>,
 	);
@@ -37,7 +45,7 @@ app.get("/", async (c) => {
 
 app.get("/create", async (c) => {
 	return c.html(
-		<Layout>
+		<Layout user={c.get("user")}>
 			<CreateResearch />
 		</Layout>,
 	);
@@ -74,7 +82,7 @@ app.post("/create", async (c) => {
 	const questions = object.questions.slice(0, 5);
 
 	return c.html(
-		<Layout>
+		<Layout user={c.get("user")}>
 			<NewResearchQuestions research={research} questions={questions} />
 		</Layout>,
 	);
@@ -113,6 +121,7 @@ app.post("/create/finish", async (c) => {
 			data: {
 				...obj,
 				questions: JSON.stringify(obj.questions),
+				user: c.get("user"),
 			},
 		})
 		.execute();
@@ -128,8 +137,8 @@ app.get("/details/:id", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: "id = ?",
-				params: id,
+				conditions: ["id = ?", "user = ?"],
+				params: [id, c.get("user")],
 			},
 		})
 		.execute();
@@ -149,7 +158,7 @@ app.get("/details/:id", async (c) => {
 	};
 
 	return c.html(
-		<Layout>
+		<Layout user={c.get("user")}>
 			<ResearchDetails research={research} />
 		</Layout>,
 	);
@@ -163,8 +172,8 @@ app.post("/re-run", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: "id = ?",
-				params: form.get("id") as string,
+				conditions: ["id = ?", "user = ?"],
+				params: [form.get("id") as string, c.get("user")],
 			},
 		})
 		.execute();
@@ -193,6 +202,7 @@ app.post("/re-run", async (c) => {
 			data: {
 				...obj,
 				questions: JSON.stringify(obj.questions),
+				user: c.get("user"),
 			},
 		})
 		.execute();
@@ -208,8 +218,8 @@ app.post("/delete", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: "id = ?",
-				params: form.get("id") as string,
+				conditions: ["id = ?", "user = ?"],
+				params: [form.get("id") as string, c.get("user")],
 			},
 		})
 		.execute();
@@ -222,8 +232,8 @@ app.post("/delete", async (c) => {
 		.delete({
 			tableName: "researches",
 			where: {
-				conditions: "id = ?",
-				params: form.get("id") as string,
+				conditions: ["id = ?", "user = ?"],
+				params: [form.get("id") as string, c.get("user")],
 			},
 		})
 		.execute();

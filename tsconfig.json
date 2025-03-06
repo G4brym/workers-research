@@ -21,9 +21,11 @@
 		"module": "es2022",
 		"noEmit": true,
 		"lib": [
+			"DOM",
 			"es2022"
 		],
 		"types": [
+			"@types/node",
 			"@cloudflare/workers-types/experimental"
 		]
 	},

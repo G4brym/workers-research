@@ -3,7 +3,6 @@ import {
 	type WorkflowEvent,
 	type WorkflowStep,
 } from "cloudflare:workers";
-import FirecrawlApp, { type SearchResponse } from "@mendable/firecrawl-js";
 import { generateObject, generateText } from "ai";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
@@ -11,11 +10,17 @@ import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
 import { getModel, getModelThinking } from "./utils";
+import {
+	type ResearchBrowser,
+	type SearchResult,
+	getBrowser,
+	webSearch,
+} from "./webSearch";
 
 async function deepResearch({
 	step,
 	env,
-	firecrawl,
+	browser,
 	query,
 	breadth,
 	depth,
@@ -24,7 +29,7 @@ async function deepResearch({
 }: {
 	step: WorkflowStep;
 	env: Env;
-	firecrawl: FirecrawlApp;
+	browser: ResearchBrowser;
 	query: string;
 	breadth: number;
 	depth: number;
@@ -37,13 +42,13 @@ async function deepResearch({
 
 	for (const serpQuery of serpQueries) {
 		try {
-			const result = await firecrawl.search(serpQuery.query, {
-				timeout: 15000,
-				limit: 5,
-				scrapeOptions: { formats: ["markdown"] },
-			});
+			const result = await webSearch(
+				await browser.getActiveBrowser(),
+				serpQuery.query,
+				5,
+			);
 
-			const newUrls = result.data.map((item) => item.url).filter(Boolean);
+			const newUrls = result.map((item) => item.url).filter(Boolean);
 			const newBreadth = Math.ceil(breadth / 2);
 			const newDepth = depth - 1;
 
@@ -69,7 +74,7 @@ async function deepResearch({
 				return await deepResearch({
 					step,
 					env,
-					firecrawl,
+					browser,
 					query: nextQuery,
 					breadth: newBreadth,
 					depth: newDepth,
@@ -97,11 +102,11 @@ async function processSerpResult({
 }: {
 	env: Env;
 	query: string;
-	result: SearchResponse;
+	result: SearchResult[];
 	numLearnings?: number;
 	numFollowUpQuestions?: number;
 }) {
-	const contents = result.data.map((item) => item.markdown).filter(Boolean);
+	const contents = result.map((item) => item.markdown).filter(Boolean);
 
 	const res = await generateObject({
 		model: getModel(env),
@@ -191,14 +196,14 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
 			.join("\n")}`;
 
-		const firecrawl = new FirecrawlApp({ apiKey: this.env.FIRECRAWL_API_KEY });
+		const browser = await getBrowser(this.env);
 
 		console.log("Starting research...");
 		const researchResult = await step.do("do research", () =>
 			deepResearch({
 				step,
 				env: this.env,
-				firecrawl,
+				browser,
 				query: fullQuery,
 				breadth: Number.parseInt(breadth),
 				depth: Number.parseInt(depth),

@@ -2,6 +2,7 @@
 name = "workers-research"
 main = "src/index.tsx"
 compatibility_date = "2025-01-28"
+compatibility_flags = [ "nodejs_compat" ]
 workers_dev = true
 
 [observability]
@@ -23,3 +24,6 @@ class_name = "ResearchWorkflow"
 binding = "DB"
 database_name = "workers-research"
 database_id = "replace-me"
+
+[browser]
+binding = "BROWSER"
