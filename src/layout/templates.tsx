@@ -40,10 +40,7 @@ const TopBar: FC = (props) => {
 									</div>
 								)}
 							</div>
-							<ul
-								tabIndex={0}
-								className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
-							>
+							<ul className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
 								<li>
 									<a href="/auth/logout">Logout</a>
 								</li>
@@ -100,7 +97,7 @@ export const ResearchList: FC = (props) => {
 								<th>Query</th>
 								<th>Status</th>
 								<th>Date</th>
-								<th></th>
+								<th />
 							</tr>
 						</thead>
 						<tbody>
@@ -199,10 +196,7 @@ export const ResearchDetails: FC = (props) => {
 				</h3>
 				<h2 className="card-title mb-4">{props.research.query}</h2>
 
-				<div
-					tabIndex={0}
-					className="collapse collapse-arrow border-base-300 bg-base-100 border"
-				>
+				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
 					<input type="checkbox" />
 					<div className="collapse-title font-semibold">
 						Research Parameters
@@ -225,10 +219,7 @@ export const ResearchDetails: FC = (props) => {
 					</div>
 				</div>
 
-				<div
-					tabIndex={0}
-					className="collapse collapse-arrow border-base-300 bg-base-100 border"
-				>
+				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
 					<input type="checkbox" />
 					<div className="collapse-title font-semibold">
 						Drill-Down Questions
@@ -249,10 +240,7 @@ export const ResearchDetails: FC = (props) => {
 					</div>
 				</div>
 
-				<div
-					tabIndex={0}
-					className="collapse collapse-open collapse-arrow border-base-300 bg-base-100 border"
-				>
+				<div className="collapse collapse-open collapse-arrow border-base-300 bg-base-100 border">
 					<div className="collapse-title font-semibold">Report</div>
 					<div className="collapse-content">
 						<div className="report p-1">{html(props.research.report_html)}</div>
@@ -302,7 +290,7 @@ export const CreateResearch: FC = () => {
 							className="textarea h-32 w-full"
 							required={true}
 							placeholder="Write me a report about..."
-						></textarea>
+						/>
 					</fieldset>
 					<fieldset className="fieldset">
 						<legend className="fieldset-legend">Research Depth?</legend>

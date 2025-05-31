@@ -10,11 +10,10 @@ function getGoogleProvider(env: Env): GoogleGenerativeAIProvider {
 	};
 
 	if (env.AI_GATEWAY_ACCOUNT_ID && env.AI_GATEWAY_NAME) {
-		args["baseURL"] =
-			`https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/google-ai-studio/v1beta`;
+		args.baseURL = `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/google-ai-studio/v1beta`;
 
 		if (env.AI_GATEWAY_API_KEY) {
-			args["headers"] = {
+			args.headers = {
 				"cf-aig-authorization": `Bearer ${env.AI_GATEWAY_API_KEY}`,
 			};
 		}
@@ -26,12 +25,12 @@ function getGoogleProvider(env: Env): GoogleGenerativeAIProvider {
 export function getModel(env: Env) {
 	const google = getGoogleProvider(env);
 
-	return google("gemini-2.0-flash-001");
+	return google("gemini-2.5-flash-preview-05-20");
 }
 export function getModelThinking(env: Env) {
 	const google = getGoogleProvider(env);
 
-	return google("gemini-2.0-flash-thinking-exp-01-21");
+	return google("gemini-2.5-flash-preview-05-20");
 }
 
 export function timeAgo(date: Date): string {

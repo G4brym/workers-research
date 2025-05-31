@@ -7,11 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": [
-			"dist/*",
-			"src/forms/templates/*",
-			"src/forms/precompiled.mjs"
-		]
+		"ignore": ["dist/*", "src/forms/templates/*", "src/forms/precompiled.mjs"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -35,12 +31,18 @@
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off",
-				"noBannedTypes": "off"
+				"noBannedTypes": "off",
+				"noForEach": "off"
 			},
 			"a11y": {
-				"useButtonType": "off"
+				"useButtonType": "off",
+				"noSvgWithoutTitle": "off",
+				"useSemanticElements": "off"
 			},
-			"correctness": {"useJsxKeyInIterable": "off"}
+			"correctness": {
+				"useJsxKeyInIterable": "off",
+				"noUnknownProperty": "off"
+			}
 		}
 	},
 	"javascript": {

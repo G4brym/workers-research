@@ -33,7 +33,7 @@ async function performSearch(
 				links
 					// @ts-ignore
 					.map((link) => link.href)
-					.filter((url) => url && url.startsWith("http"))
+					.filter((url) => url?.startsWith("http"))
 			); // Ensure valid URLs
 		});
 		return urls.slice(0, limit); // Take top x organic results;
