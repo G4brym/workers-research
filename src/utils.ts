@@ -1,11 +1,12 @@
 import {
 	type GoogleGenerativeAIProvider,
+	type GoogleGenerativeAIProviderSettings,
 	createGoogleGenerativeAI,
 } from "@ai-sdk/google";
 import type { Env } from "./bindings";
 
 function getGoogleProvider(env: Env): GoogleGenerativeAIProvider {
-	const args = {
+	const args: GoogleGenerativeAIProviderSettings = {
 		apiKey: env.GOOGLE_API_KEY,
 	};
 
@@ -58,4 +59,8 @@ export function timeAgo(date: Date): string {
 
 	count = Math.floor(count);
 	return `${count} ${unit}${count !== 1 ? "s" : ""} ago`;
+}
+
+export async function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }

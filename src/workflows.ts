@@ -44,56 +44,50 @@ async function deepResearch({
 	let allUrls = [...visitedUrls];
 
 	for (const serpQuery of serpQueries) {
-		try {
-			const result = await webSearch(
+		const result = await step.do("get new learnings", async () => {
+			return await webSearch(
 				await browser.getActiveBrowser(),
 				serpQuery.query,
 				5,
 			);
+		});
 
-			const newUrls = result.map((item) => item.url).filter(Boolean);
-			const newBreadth = Math.ceil(breadth / 2);
-			const newDepth = depth - 1;
+		const newUrls = result.map((item) => item.url).filter(Boolean);
+		const newBreadth = Math.ceil(breadth / 2);
+		const newDepth = depth - 1;
 
-			const { learnings: newLearnings, followUpQuestions } = await step.do(
-				"get new learnings",
-				async () => {
-					return await processSerpResult({
-						env,
-						query: serpQuery.query,
-						result,
-						numFollowUpQuestions: newBreadth,
-					})
-				}
-			);
+		const { learnings: newLearnings, followUpQuestions } = await step.do(
+			"get new learnings",
+			async () => {
+				return await processSerpResult({
+					env,
+					query: serpQuery.query,
+					result,
+					numFollowUpQuestions: newBreadth,
+				});
+			},
+		);
 
-			allLearnings = [...allLearnings, ...newLearnings];
-			allUrls = [...allUrls, ...newUrls];
+		allLearnings = [...allLearnings, ...newLearnings];
+		allUrls = [...allUrls, ...newUrls];
 
-			if (newDepth > 0) {
-				const nextQuery = `
+		if (newDepth > 0) {
+			const nextQuery = `
           Previous research goal: ${serpQuery.researchGoal}
           Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
         `.trim();
-				const recursiveResult = await step.do("do research", async () => {
-						return await deepResearch({
-							step,
-							env,
-							browser,
-							query: nextQuery,
-							breadth: newBreadth,
-							depth: newDepth,
-							learnings: allLearnings,
-							visitedUrls: allUrls,
-						})
-					}
-				);
-				allLearnings = [...allLearnings, ...recursiveResult.learnings];
-				allUrls = [...allUrls, ...recursiveResult.visitedUrls];
-			}
-		} catch (error: any) {
-			console.error(`Error for query: ${serpQuery.query}`, error);
-			// Continue to next query instead of returning
+			const recursiveResult = await deepResearch({
+				step,
+				env,
+				browser,
+				query: nextQuery,
+				breadth: newBreadth,
+				depth: newDepth,
+				learnings: allLearnings,
+				visitedUrls: allUrls,
+			});
+			allLearnings = [...allLearnings, ...recursiveResult.learnings];
+			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
 		}
 	}
 
@@ -128,7 +122,7 @@ async function processSerpResult({
 				.describe(`List of learnings (max ${numLearnings})`),
 			followUpQuestions: z
 				.array(z.string())
-				.describe(`Follow-up questions (max ${numFollowUpQuestions})`),
+				.describe(`List of follow-up questions (max ${numFollowUpQuestions})`),
 		}),
 	});
 	return res.object;
@@ -196,54 +190,67 @@ async function writeFinalReport({
 
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
-		console.log("Starting workflow");
+		try {
+			console.log("Starting workflow");
 
-		const { query, questions, breadth, depth, id } = event.payload;
-		const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
-			.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
-			.join("\n")}`;
+			const { query, questions, breadth, depth, id } = event.payload;
+			const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
+				.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
+				.join("\n")}`;
 
-		const browser = await getBrowser(this.env);
+			const browser = await getBrowser(this.env);
 
-		console.log("Starting research...");
-		const researchResult = await step.do("do research", async () => {
-				return await deepResearch({
-					step,
-					env: this.env,
-					browser,
-					query: fullQuery,
-					breadth: Number.parseInt(breadth),
-					depth: Number.parseInt(depth),
-					learnings: [],
-					visitedUrls: [],
-				})
-			}
-		);
-
-		console.log("Generating report");
-		const report = await step.do("generate report", () =>
-			writeFinalReport({
+			console.log("Starting research...");
+			const researchResult = await deepResearch({
+				step,
 				env: this.env,
-				prompt: fullQuery,
+				browser,
+				query: fullQuery,
+				breadth: Number.parseInt(breadth),
+				depth: Number.parseInt(depth),
+				learnings: [],
+				visitedUrls: [],
+			});
+
+			console.log("Generating report");
+			const report = await step.do("generate report", () =>
+				writeFinalReport({
+					env: this.env,
+					prompt: fullQuery,
+					learnings: researchResult.learnings,
+					visitedUrls: researchResult.visitedUrls,
+				}),
+			);
+
+			const qb = new D1QB(this.env.DB);
+			await qb
+				.update({
+					tableName: "researches",
+					data: { status: 2, result: report },
+					where: { conditions: "id = ?", params: [id] },
+				})
+				.execute();
+
+			console.log("Workflow finished!");
+			return {
 				learnings: researchResult.learnings,
 				visitedUrls: researchResult.visitedUrls,
-			}),
-		);
+				report,
+			};
+		} catch (error: any) {
+			const qb = new D1QB(this.env.DB);
+			await qb
+				.update({
+					tableName: "researches",
+					data: {
+						status: 3,
+						result: `Error: ${error.message}\n\n${error.stack ?? ""}`,
+					},
+					where: { conditions: "id = ?", params: [event.payload.id] },
+				})
+				.execute();
 
-		const qb = new D1QB(this.env.DB);
-		await qb
-			.update({
-				tableName: "researches",
-				data: { status: 2, result: report },
-				where: { conditions: "id = ?", params: [id] },
-			})
-			.execute();
-
-		console.log("Workflow finished!");
-		return {
-			learnings: researchResult.learnings,
-			visitedUrls: researchResult.visitedUrls,
-			report
-		};
+			throw error;
+		}
 	}
 }

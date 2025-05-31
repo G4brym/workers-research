@@ -108,14 +108,19 @@ export const ResearchList: FC = (props) => {
 									</td>
 									<td>
 										<span
-											className={`badge badge-soft badge-sm ${obj.status === 1 ? "badge-warning" : "badge-success"}`}
+											className={`badge badge-soft badge-sm ${obj.status === 1 ? "badge-warning" : obj.status === 2 ? "badge-success" : "badge-error"}`}
 										>
-											{obj.status === 1 ? "Running" : "Complete"}
+											{obj.status === 1
+												? "Running"
+												: obj.status === 2
+													? "Complete"
+													: "Error"}
 										</span>
 									</td>
 									<td>
 										<span className="whitespace-nowrap">
-											{timeAgo(new Date(obj.created_at))}
+											{/*{timeAgo(new Date(obj.created_at).toISOString())}*/}
+											{new Date(obj.created_at).toISOString()}
 										</span>
 									</td>
 									<th className="gap-3">

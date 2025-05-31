@@ -1,6 +1,7 @@
 import puppeteer, { type Browser } from "@cloudflare/puppeteer";
 import { NodeHtmlMarkdown } from "node-html-markdown";
 import type { Env } from "./bindings";
+import { sleep } from "./utils";
 
 export type SearchResult = {
 	title: string;
@@ -64,7 +65,7 @@ async function extractContent(
 			// @ts-ignore
 			closeButtons.forEach((btn) => btn.click());
 		});
-		await page.waitForTimeout(1000); // Allow popups to close
+		await sleep(1000); // Allow popups to close
 
 		// Extract title, description, and main content
 		const { title, description, content } = await page.evaluate(() => {

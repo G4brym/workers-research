@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { LoadAPIKeyError, generateObject } from "ai";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { marked } from "marked";
@@ -60,26 +60,48 @@ app.post("/create", async (c) => {
 		breadth: form.get("breadth") as string,
 	};
 
-	const { object } = await generateObject({
-		model: getModel(c.env),
-		messages: [
-			{ role: "system", content: FOLLOWUP_QUESTIONS_PROMPT() },
-			{
-				role: "user",
-				content: research.query,
-			},
-		],
-		schema: z.object({
-			questions: z
-				.string()
-				.array()
-				.describe(
-					`Follow up questions to clarify the research direction, max of 5`,
-				),
-		}),
-	});
+	let questions: string[];
+	try {
+		const { object } = await generateObject({
+			model: getModel(c.env),
+			messages: [
+				{ role: "system", content: FOLLOWUP_QUESTIONS_PROMPT() },
+				{
+					role: "user",
+					content: research.query,
+				},
+			],
+			schema: z.object({
+				questions: z
+					.string()
+					.array()
+					.describe(
+						`Follow up questions to clarify the research direction, max of 5`,
+					),
+			}),
+		});
 
-	const questions = object.questions.slice(0, 5);
+		questions = object.questions.slice(0, 5);
+	} catch (e) {
+		if (e instanceof LoadAPIKeyError) {
+			return c.html(
+				<Layout user={c.get("user")}>
+					<p>Provided GOOGLE_API_KEY is invalid!</p>
+					<p>
+						Please set GOOGLE_API_KEY in your environment variables, using
+						command "npx wrangler secret put GOOGLE_API_KEY"
+					</p>
+					<p>
+						Learn more here{" "}
+						<a href="https://github.com/G4brym/workers-research">
+							github.com/G4brym/workers-research
+						</a>
+						.
+					</p>
+				</Layout>,
+			);
+		}
+	}
 
 	return c.html(
 		<Layout user={c.get("user")}>
@@ -108,6 +130,16 @@ app.post("/create/finish", async (c) => {
 		questions: processedQuestions,
 		status: 1,
 	};
+
+	// const inst = new ResearchWorkflowTest(c.env, c.executionCtx)
+	// await inst.run({
+	// 	payload: obj,
+	// }, {
+	// 	do: async (name, func) => {
+	// 		console.log(`Running ${name}`)
+	// 		return await func()
+	// 	}
+	// });
 
 	await c.env.RESEARCH_WORKFLOW.create({
 		id,

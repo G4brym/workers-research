@@ -4,7 +4,11 @@
 	"description": "A Cloudflare Workers implementation of OpenAI's Deep Research agent",
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
-	"files": ["dist", "LICENSE", "README.md"],
+	"files": [
+		"dist",
+		"LICENSE",
+		"README.md"
+	],
 	"scripts": {
 		"build": "tsup src/index.ts --format cjs,esm --external cloudflare:workers",
 		"build-css": "npx @tailwindcss/cli -i ./src/layout/index.css -o ./assets/styles.css",
