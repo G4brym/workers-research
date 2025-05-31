@@ -184,7 +184,14 @@ async function writeFinalReport({
 		prompt: `Using the prompt <prompt>${prompt}</prompt>, write a detailed final report (3+ pages) that includes all the following learnings:\n\n<learnings>\n${learningsString}\n</learnings>`,
 	});
 
-	const urlsSection = `\n\n## Sources\n\n${visitedUrls.map((url) => `- ${url}`).join("\n")}`;
+	const parsedSources = [];
+	for (const url of visitedUrls) {
+		if (!parsedSources.includes(url)) {
+			parsedSources.push(url);
+		}
+	}
+
+	const urlsSection = `\n\n\n\n## Sources\n\n${parsedSources.map((url) => `- ${url}`).join("\n")}`;
 	return text + urlsSection;
 }
 

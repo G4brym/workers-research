@@ -13,40 +13,27 @@ const TopBar: FC = (props) => {
 							workers-research
 						</a>
 					</div>
-					<div className="flex-none">
-						<div className="dropdown dropdown-end">
-							<div
-								tabIndex={0}
-								role="button"
-								className="btn btn-ghost btn-circle avatar"
-							>
-								{props.user !== "unknown" ? (
+
+					{props.user !== "unknown" ? (
+						<div className="flex-none">
+							<div className="dropdown dropdown-end">
+								<div
+									tabIndex={0}
+									role="button"
+									className="btn btn-ghost btn-circle avatar"
+								>
 									<span>{props.user}</span>
-								) : (
-									<div className="w-10 rounded-full">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="100%"
-											height="100%"
-											fill="currentColor"
-											viewBox="0 0 16 16"
-										>
-											<path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
-											<path
-												fill-rule="evenodd"
-												d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"
-											/>
-										</svg>
-									</div>
-								)}
+								</div>
+								<ul className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+									<li>
+										<a href="/auth/logout">Logout</a>
+									</li>
+								</ul>
 							</div>
-							<ul className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
-								<li>
-									<a href="/auth/logout">Logout</a>
-								</li>
-							</ul>
 						</div>
-					</div>
+					) : (
+						<div />
+					)}
 				</div>
 			</div>
 		</header>
