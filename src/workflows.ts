@@ -40,6 +40,9 @@ async function deepResearch({
 		generateSerpQueries({ env, query, learnings, numQueries: breadth }),
 	);
 
+	let allLearnings = [...learnings];
+	let allUrls = [...visitedUrls];
+
 	for (const serpQuery of serpQueries) {
 		try {
 			const result = await webSearch(
@@ -54,43 +57,47 @@ async function deepResearch({
 
 			const { learnings: newLearnings, followUpQuestions } = await step.do(
 				"get new learnings",
-				() =>
-					processSerpResult({
+				async () => {
+					return await processSerpResult({
 						env,
 						query: serpQuery.query,
 						result,
 						numFollowUpQuestions: newBreadth,
-					}),
+					})
+				}
 			);
 
-			const allLearnings = [...learnings, ...newLearnings];
-			const allUrls = [...visitedUrls, ...newUrls];
+			allLearnings = [...allLearnings, ...newLearnings];
+			allUrls = [...allUrls, ...newUrls];
 
 			if (newDepth > 0) {
 				const nextQuery = `
           Previous research goal: ${serpQuery.researchGoal}
           Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
         `.trim();
-				return await deepResearch({
-					step,
-					env,
-					browser,
-					query: nextQuery,
-					breadth: newBreadth,
-					depth: newDepth,
-					learnings: allLearnings,
-					visitedUrls: allUrls,
-				});
+				const recursiveResult = await step.do("do research", async () => {
+						return await deepResearch({
+							step,
+							env,
+							browser,
+							query: nextQuery,
+							breadth: newBreadth,
+							depth: newDepth,
+							learnings: allLearnings,
+							visitedUrls: allUrls,
+						})
+					}
+				);
+				allLearnings = [...allLearnings, ...recursiveResult.learnings];
+				allUrls = [...allUrls, ...recursiveResult.visitedUrls];
 			}
-			return { learnings: allLearnings, visitedUrls: allUrls };
 		} catch (error: any) {
 			console.error(`Error for query: ${serpQuery.query}`, error);
-			return { learnings: [], visitedUrls: [] };
+			// Continue to next query instead of returning
 		}
 	}
 
-	// If no queries were processed, return empty arrays
-	return { learnings: [], visitedUrls: [] };
+	return { learnings: allLearnings, visitedUrls: allUrls };
 }
 
 async function processSerpResult({
@@ -199,17 +206,18 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 		const browser = await getBrowser(this.env);
 
 		console.log("Starting research...");
-		const researchResult = await step.do("do research", () =>
-			deepResearch({
-				step,
-				env: this.env,
-				browser,
-				query: fullQuery,
-				breadth: Number.parseInt(breadth),
-				depth: Number.parseInt(depth),
-				learnings: [],
-				visitedUrls: [],
-			}),
+		const researchResult = await step.do("do research", async () => {
+				return await deepResearch({
+					step,
+					env: this.env,
+					browser,
+					query: fullQuery,
+					breadth: Number.parseInt(breadth),
+					depth: Number.parseInt(depth),
+					learnings: [],
+					visitedUrls: [],
+				})
+			}
 		);
 
 		console.log("Generating report");
@@ -232,6 +240,10 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			.execute();
 
 		console.log("Workflow finished!");
-		return researchResult;
+		return {
+			learnings: researchResult.learnings,
+			visitedUrls: researchResult.visitedUrls,
+			report
+		};
 	}
 }
