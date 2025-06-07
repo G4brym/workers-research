@@ -1,9 +1,9 @@
 {
 	"name": "workers-research",
 	"version": "0.0.1",
-	"description": "A Cloudflare Workers implementation of OpenAI's Deep Research agent",
+	"description": "A serverless, AI-powered deep research agent built with Cloudflare Workers and Google Gemini 2.5",
 	"main": "./dist/index.js",
-	"module": "./dist/index.mjs",
+	"type": "module",
 	"files": [
 		"dist",
 		"LICENSE",
@@ -11,7 +11,7 @@
 	],
 	"scripts": {
 		"build": "tsup src/index.ts --format cjs,esm --external cloudflare:workers",
-		"build-css": "npx @tailwindcss/cli -i ./src/layout/index.css -o ./assets/styles.css",
+		"build-css": "npx @tailwindcss/cli -i ./src/templates/styles.css -o ./src/static/styles.css",
 		"lint": "npx @biomejs/biome check src/ || (npx @biomejs/biome check --write src/; exit 1)"
 	},
 	"publishConfig": {
@@ -29,24 +29,21 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@cloudflare/vitest-pool-workers": "^0.8.34",
-		"@cloudflare/workers-types": "^4.20250531.0",
+		"@cloudflare/workers-types": "^4.20250607.0",
 		"@tailwindcss/cli": "^4.1.8",
-		"@types/node": "^22.15.29",
-		"daisyui": "^5.0.43",
+		"@types/node": "^22.15.30",
 		"tailwindcss": "^4.1.8",
 		"typescript": "^5.8.3",
-		"vitest": "3.1.4",
-		"wrangler": "^4.18.0"
+		"wrangler": "^4.19.1"
 	},
 	"dependencies": {
-		"@ai-sdk/google": "^1.2.18",
+		"@ai-sdk/google": "^1.2.19",
 		"@cloudflare/puppeteer": "^1.0.2",
 		"ai": "^4.3.16",
-		"hono": "^4.7.10",
+		"hono": "^4.7.11",
 		"marked": "^15.0.12",
 		"node-html-markdown": "^1.3.0",
 		"workers-qb": "^1.10.2",
-		"zod": "^3.25.42"
+		"zod": "^3.25.56"
 	}
 }

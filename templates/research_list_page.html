@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Reports - Workers Research</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-semibold text-gray-900">workers-research</h1>
+                <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
+                    + New Research
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Research Reports</h2>
+            <p class="text-gray-600">Manage and review your deep research projects</p>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div class="flex gap-3">
+                <select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>All Status</option>
+                    <option>Completed</option>
+                    <option>Processing</option>
+                    <option>Failed</option>
+                    <option>Draft</option>
+                </select>
+                <select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>Last 30 days</option>
+                    <option>Last 7 days</option>
+                    <option>Last 3 months</option>
+                    <option>All time</option>
+                </select>
+            </div>
+            <div class="relative">
+                <input type="text" placeholder="Search reports..." class="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64">
+                <svg class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Reports List -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Table Header -->
+            <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+                <div class="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+                    <div class="col-span-5">Report Title</div>
+                    <div class="col-span-2">Status</div>
+                    <div class="col-span-2">Created</div>
+                    <div class="col-span-2">Duration</div>
+                    <div class="col-span-1">Actions</div>
+                </div>
+            </div>
+
+            <!-- Report Items -->
+            <div class="divide-y divide-gray-200">
+                <!-- Report 1 - Completed -->
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <div class="col-span-5">
+                            <h3 class="font-medium text-gray-900 mb-1">The Future of Remote Work in Tech Companies</h3>
+                            <p class="text-sm text-gray-600 line-clamp-1">Analysis of remote work implications on company culture, productivity, and talent acquisition...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                Completed
+                            </span>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">Mar 15, 2024</div>
+                            <div class="text-xs text-gray-500">2:30 PM</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">8 min 32s</div>
+                            <div class="text-xs text-gray-500">Research time</div>
+                        </div>
+                        <div class="col-span-1">
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report 2 - Processing -->
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <div class="col-span-5">
+                            <h3 class="font-medium text-gray-900 mb-1">AI Impact on Software Development Practices</h3>
+                            <p class="text-sm text-gray-600 line-clamp-1">Comprehensive analysis of how AI tools are changing coding practices and developer workflows...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <svg class="animate-spin w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing
+                            </span>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">Mar 14, 2024</div>
+                            <div class="text-xs text-gray-500">4:15 PM</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">6 min 18s</div>
+                            <div class="text-xs text-gray-500">Est. remaining</div>
+                        </div>
+                        <div class="col-span-1">
+                            <button class="text-gray-400 cursor-not-allowed text-sm font-medium">Processing</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report 3 - Completed -->
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <div class="col-span-5">
+                            <h3 class="font-medium text-gray-900 mb-1">Cybersecurity Trends in FinTech Startups</h3>
+                            <p class="text-sm text-gray-600 line-clamp-1">Security challenges and best practices for financial technology companies in 2024...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                Completed
+                            </span>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">Mar 12, 2024</div>
+                            <div class="text-xs text-gray-500">10:45 AM</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">12 min 7s</div>
+                            <div class="text-xs text-gray-500">Research time</div>
+                        </div>
+                        <div class="col-span-1">
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report 4 - Failed -->
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <div class="col-span-5">
+                            <h3 class="font-medium text-gray-900 mb-1">Blockchain Adoption in Enterprise Software</h3>
+                            <p class="text-sm text-gray-600 line-clamp-1">Research into enterprise blockchain implementation challenges and opportunities...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Failed
+                            </span>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">Mar 10, 2024</div>
+                            <div class="text-xs text-gray-500">3:22 PM</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">2 min 45s</div>
+                            <div class="text-xs text-gray-500">Before error</div>
+                        </div>
+                        <div class="col-span-1">
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Retry</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report 5 - Draft -->
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <div class="col-span-5">
+                            <h3 class="font-medium text-gray-900 mb-1">Machine Learning Infrastructure Scaling</h3>
+                            <p class="text-sm text-gray-600 line-clamp-1">Best practices for scaling ML infrastructure in production environments...</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                Draft
+                            </span>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">Mar 8, 2024</div>
+                            <div class="text-xs text-gray-500">1:30 PM</div>
+                        </div>
+                        <div class="col-span-2">
+                            <div class="text-sm text-gray-900">-</div>
+                            <div class="text-xs text-gray-500">Not started</div>
+                        </div>
+                        <div class="col-span-1">
+                            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Continue</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-6 flex items-center justify-between">
+            <div class="text-sm text-gray-700">
+                Showing <span class="font-medium">1</span> to <span class="font-medium">5</span> of <span class="font-medium">23</span> results
+            </div>
+            <nav class="flex items-center gap-2">
+                <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Previous
+                </button>
+                <button class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">
+                    1
+                </button>
+                <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    2
+                </button>
+                <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    3
+                </button>
+                <span class="px-3 py-2 text-sm text-gray-500">...</span>
+                <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    5
+                </button>
+                <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    Next
+                </button>
+            </nav>
+        </div>
+
+        <!-- Stats Cards (Optional) -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-gray-900">23</div>
+                <div class="text-sm text-gray-600">Total Reports</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-green-600">18</div>
+                <div class="text-sm text-gray-600">Completed</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-yellow-600">2</div>
+                <div class="text-sm text-gray-600">Processing</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <div class="text-2xl font-bold text-gray-900">9.2 min</div>
+                <div class="text-sm text-gray-600">Avg. Duration</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Add interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Search functionality
+            const searchInput = document.querySelector('input[type="text"]');
+            searchInput.addEventListener('input', function(e) {
+                // In a real app, this would filter the results
+                console.log('Searching for:', e.target.value);
+            });
+
+            // Filter dropdowns
+            const filterSelects = document.querySelectorAll('select');
+            filterSelects.forEach(select => {
+                select.addEventListener('change', function(e) {
+                    // In a real app, this would filter the results
+                    console.log('Filter changed:', e.target.value);
+                });
+            });
+
+            // Action buttons
+            const actionButtons = document.querySelectorAll('button');
+            actionButtons.forEach(button => {
+                if (button.textContent.includes('View') || button.textContent.includes('Continue') || button.textContent.includes('Retry')) {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('Action clicked:', button.textContent);
+                        // In a real app, this would navigate to the appropriate page
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Research - Workers Research</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-xl font-semibold text-gray-900">workers-research</h1>
+                <button onclick="window.history.back()" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                    ← Back to Reports
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Start New Research</h2>
+            <p class="text-gray-600">Begin by describing what you'd like to research in detail</p>
+        </div>
+
+        <!-- Initial Query Form -->
+        <div id="query-section" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="mb-6">
+                <label for="initial-query" class="block text-sm font-medium text-gray-700 mb-2">
+                    Research Question
+                </label>
+                <textarea 
+                    id="initial-query" 
+                    name="query"
+                    rows="6" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    placeholder="Describe your research question in detail. Be specific about what you want to learn, any particular focus areas, timeframes, or scope you're interested in..."
+                    required
+                ></textarea>
+                <p class="mt-2 text-sm text-gray-500">
+                    The more detailed your question, the better our AI can tailor follow-up questions to gather relevant information.
+                </p>
+            </div>
+
+            <div class="flex justify-end">
+                <button 
+                    id="generate-questions-btn"
+                    hx-post="/api/research/generate-questions"
+                    hx-target="#followup-section"
+                    hx-include="#initial-query"
+                    hx-indicator="#loading-questions"
+                    class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                    Generate Questions
+                </button>
+            </div>
+
+            <!-- Loading indicator for questions -->
+            <div id="loading-questions" class="htmx-indicator mt-4 flex items-center justify-center">
+                <div class="flex items-center space-x-2 text-blue-600">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-sm font-medium">Generating personalized questions...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Follow-up Questions Section -->
+        <div id="followup-section"></div>
+
+        <!-- Final Form (Hidden initially) -->
+        <form id="final-form" action="/api/research/start" method="POST" class="hidden">
+            <input type="hidden" name="original_query" id="original-query-hidden">
+            <!-- Question answers will be added dynamically -->
+        </form>
+    </main>
+
+    <script>
+        // HTMX event handlers
+        document.addEventListener('htmx:beforeRequest', function(evt) {
+            const query = document.getElementById('initial-query').value.trim();
+            if (!query) {
+                evt.preventDefault();
+                alert('Please enter a research question before proceeding.');
+                return;
+            }
+            
+            // Disable the button during request
+            document.getElementById('generate-questions-btn').disabled = true;
+        });
+
+        document.addEventListener('htmx:afterRequest', function(evt) {
+            // Re-enable the button
+            document.getElementById('generate-questions-btn').disabled = false;
+            
+            if (evt.detail.successful) {
+                // Scroll to follow-up section
+                document.getElementById('followup-section').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Set up the final form
+                setupFinalForm();
+            } else {
+                console.error('Error generating questions:', evt.detail.xhr.responseText);
+                alert('Failed to generate questions. Please try again.');
+            }
+        });
+
+        function setupFinalForm() {
+            const originalQuery = document.getElementById('initial-query').value;
+            document.getElementById('original-query-hidden').value = originalQuery;
+            
+            // Add event listener to start research button when it's created
+            setTimeout(() => {
+                const startBtn = document.getElementById('start-research-btn');
+                if (startBtn) {
+                    startBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        
+                        // Validate all questions are answered
+                        const questions = document.querySelectorAll('#followup-section input, #followup-section textarea, #followup-section select');
+                        let allAnswered = true;
+                        
+                        questions.forEach(question => {
+                            if (!question.value.trim()) {
+                                allAnswered = false;
+                                question.classList.add('border-red-500');
+                            } else {
+                                question.classList.remove('border-red-500');
+                            }
+                        });
+                        
+                        if (!allAnswered) {
+                            alert('Please answer all questions before starting the research.');
+                            return;
+                        }
+                        
+                        // Show loading state
+                        startBtn.disabled = true;
+                        startBtn.innerHTML = `
+                            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Starting Research...
+                        `;
+                        
+                        // Copy all question answers to final form
+                        const finalForm = document.getElementById('final-form');
+                        
+                        // Clear existing question fields
+                        const existingFields = finalForm.querySelectorAll('input[name^="question_"], input[name^="answer_"]');
+                        existingFields.forEach(field => field.remove());
+                        
+                        // Add questions and answers
+                        questions.forEach((input, index) => {
+                            const questionText = input.closest('.question-item').querySelector('.question-text').textContent;
+                            
+                            // Add question
+                            const questionField = document.createElement('input');
+                            questionField.type = 'hidden';
+                            questionField.name = `question_${index + 1}`;
+                            questionField.value = questionText;
+                            finalForm.appendChild(questionField);
+                            
+                            // Add answer
+                            const answerField = document.createElement('input');
+                            answerField.type = 'hidden';
+                            answerField.name = `answer_${index + 1}`;
+                            answerField.value = input.value;
+                            finalForm.appendChild(answerField);
+                        });
+                        
+                        // Submit the final form
+                        finalForm.submit();
+                    });
+                }
+            }, 100);
+        }
+
+        // Handle textarea auto-resize
+        document.addEventListener('input', function(e) {
+            if (e.target.tagName === 'TEXTAREA') {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+            }
+        });
+    </script>
+</body>
+</html>
