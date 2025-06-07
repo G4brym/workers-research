@@ -5,14 +5,15 @@ import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
+import { ResearchDetails } from "./layout/templates";
+import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
 import {
 	CreateResearch,
 	Layout,
 	NewResearchQuestions,
-	ResearchDetails,
 	ResearchList,
-} from "./layout/templates";
-import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
+	TopBar,
+} from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import { getModel } from "./utils";
 
@@ -20,24 +21,23 @@ export { ResearchWorkflow } from "./workflows";
 
 export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-app.use("*", async (c, next) => {
-	if (!c.get("user")) c.set("user", "unknown");
-
-	await next();
-});
-
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
 	const researches = await qb
 		.select<ResearchTypeDB>("researches")
-		.where("user = ?", c.get("user"))
 		.orderBy("created_at desc")
 		.all();
 
-	const res = researches.results;
-
 	return c.html(
-		<Layout user={c.get("user")}>
+		<Layout>
+			<TopBar>
+				<a
+					href="/create"
+					className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+				>
+					+ New Research
+				</a>
+			</TopBar>
 			<ResearchList researches={researches} />
 		</Layout>,
 	);
@@ -45,20 +45,24 @@ app.get("/", async (c) => {
 
 app.get("/create", async (c) => {
 	return c.html(
-		<Layout user={c.get("user")}>
+		<Layout>
+			<TopBar>
+				<a
+					href="/"
+					className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+				>
+					← Back to Reports
+				</a>
+			</TopBar>
 			<CreateResearch />
+			<script>loadNewResearch()</script>
 		</Layout>,
 	);
 });
 
-app.post("/create", async (c) => {
+app.post("/create/questions", async (c) => {
 	const form = await c.req.formData();
-
-	const research = {
-		query: form.get("query") as string,
-		depth: form.get("depth") as string,
-		breadth: form.get("breadth") as string,
-	};
+	const query = form.get("query") as string;
 
 	let questions: string[];
 	try {
@@ -68,7 +72,7 @@ app.post("/create", async (c) => {
 				{ role: "system", content: FOLLOWUP_QUESTIONS_PROMPT() },
 				{
 					role: "user",
-					content: research.query,
+					content: query,
 				},
 			],
 			schema: z.object({
@@ -85,7 +89,7 @@ app.post("/create", async (c) => {
 	} catch (e) {
 		if (e instanceof LoadAPIKeyError) {
 			return c.html(
-				<Layout user={c.get("user")}>
+				<Layout>
 					<p>Provided GOOGLE_API_KEY is invalid!</p>
 					<p>
 						Please set GOOGLE_API_KEY in your environment variables, using
@@ -101,16 +105,18 @@ app.post("/create", async (c) => {
 				</Layout>,
 			);
 		}
+
+		throw e;
 	}
 
 	return c.html(
-		<Layout user={c.get("user")}>
-			<NewResearchQuestions research={research} questions={questions} />
+		<Layout>
+			<NewResearchQuestions questions={questions} />
 		</Layout>,
 	);
 });
 
-app.post("/create/finish", async (c) => {
+app.post("/create", async (c) => {
 	const id = crypto.randomUUID();
 	const form = await c.req.formData();
 
@@ -153,7 +159,6 @@ app.post("/create/finish", async (c) => {
 			data: {
 				...obj,
 				questions: JSON.stringify(obj.questions),
-				user: c.get("user"),
 			},
 		})
 		.execute();
@@ -169,8 +174,8 @@ app.get("/details/:id", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: ["id = ?", "user = ?"],
-				params: [id, c.get("user")],
+				conditions: ["id = ?"],
+				params: [id],
 			},
 		})
 		.execute();
@@ -190,7 +195,7 @@ app.get("/details/:id", async (c) => {
 	};
 
 	return c.html(
-		<Layout user={c.get("user")}>
+		<Layout>
 			<ResearchDetails research={research} />
 		</Layout>,
 	);
@@ -204,8 +209,8 @@ app.post("/re-run", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: ["id = ?", "user = ?"],
-				params: [form.get("id") as string, c.get("user")],
+				conditions: ["id = ?"],
+				params: [form.get("id") as string],
 			},
 		})
 		.execute();
@@ -234,7 +239,6 @@ app.post("/re-run", async (c) => {
 			data: {
 				...obj,
 				questions: JSON.stringify(obj.questions),
-				user: c.get("user"),
 			},
 		})
 		.execute();
@@ -250,8 +254,8 @@ app.post("/delete", async (c) => {
 		.fetchOne<ResearchTypeDB>({
 			tableName: "researches",
 			where: {
-				conditions: ["id = ?", "user = ?"],
-				params: [form.get("id") as string, c.get("user")],
+				conditions: ["id = ?"],
+				params: [form.get("id") as string],
 			},
 		})
 		.execute();
@@ -264,8 +268,8 @@ app.post("/delete", async (c) => {
 		.delete({
 			tableName: "researches",
 			where: {
-				conditions: ["id = ?", "user = ?"],
-				params: [form.get("id") as string, c.get("user")],
+				conditions: ["id = ?"],
+				params: [form.get("id") as string],
 			},
 		})
 		.execute();

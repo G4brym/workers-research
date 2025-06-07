@@ -1,0 +1,664 @@
+import { html } from "hono/html";
+import type { FC } from "hono/jsx";
+import type { ResearchType } from "../types";
+import { timeAgo } from "../utils";
+
+export const TopBar: FC = (props) => {
+	return (
+		<header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+			<div className="max-w-6xl mx-auto px-4 py-4">
+				<div className="flex items-center justify-between">
+					<h1 className="text-xl font-semibold text-gray-900">
+						workers-research
+					</h1>
+					{props.children}
+				</div>
+			</div>
+		</header>
+	);
+};
+
+export const Layout: FC = (props) => {
+	return (
+		<html lang="en">
+			<head>
+				<meta charset="UTF-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+				<title>{props.title || "workers-research"}</title>
+				<script src="https://cdn.tailwindcss.com"></script>
+				<script src="https://unpkg.com/htmx.org@2.0.0"></script>
+				<script src="core.js"></script>
+			</head>
+			<body class="bg-gray-50 min-h-screen">{props.children}</body>
+		</html>
+	);
+};
+
+const ResearchStatus: FC = (props) => {
+	if (props.status === 1) {
+		<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+			<svg
+				className="animate-spin w-3 h-3 mr-1"
+				fill="none"
+				viewBox="0 0 24 24"
+			>
+				<circle
+					className="opacity-25"
+					cx="12"
+					cy="12"
+					r="10"
+					stroke="currentColor"
+					stroke-width="4"
+				></circle>
+				<path
+					className="opacity-75"
+					fill="currentColor"
+					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+				></path>
+			</svg>
+			Processing
+		</span>;
+	}
+
+	if (props.status === 2) {
+		<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+			<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+				<path
+					fill-rule="evenodd"
+					d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+					clip-rule="evenodd"
+				></path>
+			</svg>
+			Completed
+		</span>;
+	}
+
+	return (
+		<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+			<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+				<path
+					fill-rule="evenodd"
+					d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+					clip-rule="evenodd"
+				></path>
+			</svg>
+			Failed
+		</span>
+	);
+};
+
+export const ResearchList: FC = (props) => {
+	if (props.researches.results.length === 0) {
+		return (
+			<div className="flex flex-col items-center justify-center py-16 px-4">
+				<div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+					<svg
+						className="w-12 h-12 text-gray-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						></path>
+					</svg>
+				</div>
+
+				<h3 className="text-xl font-semibold text-gray-900 mb-2">
+					No research reports yet
+				</h3>
+				<p className="text-gray-600 text-center max-w-md mb-8">
+					Start your first deep research project to generate comprehensive
+					reports with AI-powered insights and analysis.
+				</p>
+
+				<a
+					href="/create"
+					className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg
+						className="w-4 h-4 mr-2 inline-block"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 4v16m8-8H4"
+						></path>
+					</svg>
+					Create Your First Research
+				</a>
+
+				<div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl">
+					<div className="text-center">
+						<div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+							<svg
+								className="w-6 h-6 text-blue-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path>
+							</svg>
+						</div>
+						<h4 className="font-medium text-gray-900 mb-1">
+							AI-Powered Questions
+						</h4>
+						<p className="text-sm text-gray-600">
+							Get personalized follow-up questions to refine your research scope
+						</p>
+					</div>
+
+					<div className="text-center">
+						<div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+							<svg
+								className="w-6 h-6 text-green-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+								></path>
+							</svg>
+						</div>
+						<h4 className="font-medium text-gray-900 mb-1">Deep Analysis</h4>
+						<p className="text-sm text-gray-600">
+							Comprehensive reports with data-driven insights and
+							recommendations
+						</p>
+					</div>
+
+					<div className="text-center">
+						<div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+							<svg
+								className="w-6 h-6 text-purple-600"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path>
+							</svg>
+						</div>
+						<h4 className="font-medium text-gray-900 mb-1">Fast Results</h4>
+						<p className="text-sm text-gray-600">
+							Get detailed research reports in minutes, not hours or days
+						</p>
+					</div>
+				</div>
+
+				<div className="mt-8 text-center">
+					<p className="text-xs text-gray-500">
+						Your research history and reports will appear here once you start
+						creating them
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<main className="max-w-6xl mx-auto px-4 py-8">
+			<div className="mb-8">
+				<h2 className="text-2xl font-bold text-gray-900 mb-2">
+					Research Reports
+				</h2>
+				<p className="text-gray-600">
+					Manage and review your deep research projects
+				</p>
+			</div>
+			<div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+				<div className="flex gap-3">
+					<select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+						<option>All Status</option>
+						<option>Completed</option>
+						<option>Processing</option>
+						<option>Failed</option>
+						<option>Draft</option>
+					</select>
+					<select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+						<option>Last 30 days</option>
+						<option>Last 7 days</option>
+						<option>Last 3 months</option>
+						<option>All time</option>
+					</select>
+				</div>
+				<div className="relative">
+					<input
+						type="text"
+						placeholder="Search reports..."
+						class="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
+					/>
+					<svg
+						class="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						></path>
+					</svg>
+				</div>
+			</div>
+
+			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+				<div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
+					<div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700">
+						<div className="col-span-5">Report Title</div>
+						<div className="col-span-2">Status</div>
+						<div className="col-span-2">Created</div>
+						<div className="col-span-2">Duration</div>
+						<div className="col-span-1">Actions</div>
+					</div>
+				</div>
+
+				<div className="divide-y divide-gray-200">
+					{(props.researches.results as ResearchType[]).map((obj) => (
+						<div className="px-6 py-4 hover:bg-gray-50 transition-colors">
+							<div className="grid grid-cols-12 gap-4 items-center">
+								<div className="col-span-5">
+									<h3 class="font-medium text-gray-900 mb-1">
+										{obj.title ?? ""}
+									</h3>
+									<p className="text-sm text-gray-600 line-clamp-1">
+										{obj.query}
+									</p>
+								</div>
+								<div className="col-span-2">
+									<ResearchStatus status={obj.status} />
+								</div>
+								<div className="col-span-2">
+									<div className="text-sm text-gray-900">Mar 15, 2024</div>
+									<div className="text-xs text-gray-500">2:30 PM</div>
+								</div>
+								<div className="col-span-2">
+									<div className="text-sm text-gray-900">
+										{obj.duration ?? ""}
+									</div>
+									<div className="text-xs text-gray-500">Research time</div>
+								</div>
+								<div className="col-span-1">
+									<a
+										href={"/details/" + obj.id}
+										class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+									>
+										View
+									</a>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div className="mt-6 flex items-center justify-between">
+				<div className="text-sm text-gray-700">
+					Showing <span class="font-medium">1</span> to{" "}
+					<span class="font-medium">5</span> of{" "}
+					<span class="font-medium">23</span> results
+				</div>
+				<nav class="flex items-center gap-2">
+					<button
+						class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled
+					>
+						Previous
+					</button>
+					<button class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">
+						1
+					</button>
+					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+						2
+					</button>
+					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+						3
+					</button>
+					<span class="px-3 py-2 text-sm text-gray-500">...</span>
+					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+						5
+					</button>
+					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+						Next
+					</button>
+				</nav>
+			</div>
+
+			<div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+				<div className="bg-white p-4 rounded-lg border border-gray-200">
+					<div className="text-2xl font-bold text-gray-900">23</div>
+					<div className="text-sm text-gray-600">Total Reports</div>
+				</div>
+				<div className="bg-white p-4 rounded-lg border border-gray-200">
+					<div className="text-2xl font-bold text-green-600">18</div>
+					<div className="text-sm text-gray-600">Completed</div>
+				</div>
+				<div className="bg-white p-4 rounded-lg border border-gray-200">
+					<div className="text-2xl font-bold text-yellow-600">2</div>
+					<div className="text-sm text-gray-600">Processing</div>
+				</div>
+				<div className="bg-white p-4 rounded-lg border border-gray-200">
+					<div className="text-2xl font-bold text-gray-900">9.2 min</div>
+					<div className="text-sm text-gray-600">Avg. Duration</div>
+				</div>
+			</div>
+		</main>
+	);
+};
+
+export const ResearchDetails: FC = (props) => {
+	return (
+		<div className="card bg-base-100">
+			<div className="card-body">
+				<h3 className="card-title h-3">
+					<span class="opacity-50">Reading Research:</span>
+					<div class="mr-0 ml-auto flex gap-1">
+						<a href="/" className="btn btn-sm whitespace-nowrap">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="20"
+								height="24"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"
+								/>
+							</svg>
+							Go back
+						</a>
+						<button
+							className="btn btn-sm btn-warning whitespace-nowrap"
+							onClick="document.getElementById('delete_modal').showModal()"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="16"
+								height="16"
+								fill="currentColor"
+								viewBox="0 0 16 16"
+							>
+								<path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
+							</svg>
+							Delete Research
+						</button>
+					</div>
+
+					<dialog id="delete_modal" className="modal">
+						<div className="modal-box">
+							<form method="dialog">
+								<button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
+									✕
+								</button>
+							</form>
+							<h3 className="font-bold text-lg">Are you sure?</h3>
+							<p className="py-4">Deleting the research is not reversible</p>
+							<div className="modal-action">
+								<form method="post" action="/delete">
+									<input type="hidden" name="id" value={props.research.id} />
+									<div className="flex gap-1">
+										<button className="btn btn-error" type="submit">
+											Delete
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</dialog>
+				</h3>
+				<h2 className="card-title mb-4">{props.research.query}</h2>
+
+				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
+					<input type="checkbox" />
+					<div className="collapse-title font-semibold">
+						Research Parameters
+					</div>
+					<div className="collapse-content text-sm">
+						<div className="overflow-x-auto">
+							<table className="table">
+								<tbody>
+									<tr>
+										<th className="font-bold">Depth</th>
+										<td>{props.research.depth}</td>
+									</tr>
+									<tr>
+										<th className="font-bold">Breadth</th>
+										<td>{props.research.breadth}</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
+					<input type="checkbox" />
+					<div className="collapse-title font-semibold">
+						Drill-Down Questions
+					</div>
+					<div className="collapse-content text-sm">
+						<ul className="list bg-base-100 rounded-box shadow-md">
+							{props.research.questions.map((obj) => (
+								<li className="list-row">
+									<div>
+										<div>{obj.question}</div>
+										<div className="text-xs uppercase font-semibold opacity-60">
+											{obj.answer}
+										</div>
+									</div>
+								</li>
+							))}
+						</ul>
+					</div>
+				</div>
+
+				<div className="collapse collapse-open collapse-arrow border-base-300 bg-base-100 border">
+					<div className="collapse-title font-semibold">Report</div>
+					<div className="collapse-content">
+						<div className="report p-1">{html(props.research.report_html)}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
+
+export const CreateResearch: FC = () => {
+	return (
+		<main class="max-w-4xl mx-auto px-4 py-8">
+			<div class="mb-8">
+				<h2 class="text-2xl font-bold text-gray-900 mb-2">
+					Start New Research
+				</h2>
+				<p class="text-gray-600">
+					Begin by describing what you'd like to research in detail
+				</p>
+			</div>
+
+			<div
+				id="query-section"
+				class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6"
+			>
+				<div class="mb-6">
+					<div class="mb-3">
+						<label
+							htmlFor="initial-query"
+							className="block text-sm font-medium text-gray-700 mb-2"
+						>
+							Research Question
+						</label>
+						<textarea
+							id="initial-query"
+							name="query"
+							rows="6"
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+							placeholder="Describe your research question in detail. Be specific about what you want to learn, any particular focus areas, timeframes, or scope you're interested in..."
+							required
+						></textarea>
+						<p className="mt-2 text-sm text-gray-500">
+							The more detailed your question, the better our AI can tailor
+							follow-up questions to gather relevant information.
+						</p>
+					</div>
+					<div className="flex">
+						<div className="grow mr-2">
+							<label
+								htmlFor="initial-depth"
+								className="block text-sm font-medium text-gray-700 mb-2"
+							>
+								Depth
+							</label>
+							<input
+								id="initial-depth"
+								name="depth"
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+								value={3}
+								required
+							></input>
+						</div>
+						<div className="grow ml-2">
+							<label
+								htmlFor="initial-breadth"
+								className="block text-sm font-medium text-gray-700 mb-2"
+							>
+								Breadth
+							</label>
+							<input
+								id="initial-breadth"
+								name="breadth"
+								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+								value={3}
+								required
+							></input>
+						</div>
+					</div>
+				</div>
+
+				<div class="flex justify-end">
+					<button
+						id="generate-questions-btn"
+						hx-post="/create/questions"
+						hx-target="#followup-section"
+						hx-include="#initial-query"
+						hx-indicator="#loading-questions"
+						class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					>
+						Generate Questions
+					</button>
+				</div>
+
+				<div
+					id="loading-questions"
+					class="htmx-indicator mt-4 flex items-center justify-center"
+				>
+					<div class="flex items-center space-x-2 text-blue-600">
+						<svg
+							class="animate-spin h-5 w-5"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path>
+						</svg>
+						<span class="text-sm font-medium">
+							Generating personalized questions...
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<div id="followup-section"></div>
+
+			<form id="final-form" action="/create" method="post" class="hidden">
+				<input type="hidden" name="query" id="original-query-hidden" />
+				<input type="hidden" name="depth" id="depth-hidden" />
+				<input type="hidden" name="breadth" id="breadth-hidden" />
+			</form>
+		</main>
+	);
+};
+
+export const NewResearchQuestions: FC = (props) => {
+	return (
+		<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+			<div className="mb-6">
+				<h3 className="text-lg font-semibold text-gray-900 mb-2">
+					Follow-up Questions
+				</h3>
+				<p className="text-sm text-gray-600">
+					Based on your research question, please answer these follow-up
+					questions to help us provide more targeted insights.
+				</p>
+			</div>
+
+			<div className="space-y-6">
+				{props.questions.map((obj, i) => (
+					<div className="question-item">
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+							<span className="question-text">{obj}</span>
+							<span className="text-red-500 ml-1">*</span>
+						</label>
+						<input
+							type="text"
+							name={"followup_" + i}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							required
+						/>
+					</div>
+				))}
+			</div>
+
+			<div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+				<button
+					type="button"
+					onClick="document.getElementById('followup-section').innerHTML = ''; document.getElementById('initial-query').focus();"
+					className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+				>
+					← Back to Query
+				</button>
+				<button
+					type="button"
+					id="start-research-btn"
+					className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+				>
+					Start Deep Research
+				</button>
+			</div>
+		</div>
+	);
+};
