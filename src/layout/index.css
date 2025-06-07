@@ -1,9 +1,0 @@
-@import "tailwindcss";
-
-@plugin "daisyui" {
-	themes: cupcake --default;
-}
-
-.report {
-	@import "./report-styling.css";
-}
