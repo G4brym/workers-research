@@ -5,17 +5,18 @@ import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
+import { renderMarkdownReportContent } from "./markdown";
 import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
 import {
-	CreateResearch, ResearchDetails,
+	CreateResearch,
 	Layout,
 	NewResearchQuestions,
+	ResearchDetails,
 	ResearchList,
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import { getModel } from "./utils";
-import {renderMarkdownReportContent} from "./markdown";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -138,16 +139,6 @@ app.post("/create", async (c) => {
 		status: 1,
 	};
 
-	// const inst = new ResearchWorkflowTest(c.env, c.executionCtx)
-	// await inst.run({
-	// 	payload: obj,
-	// }, {
-	// 	do: async (name, func) => {
-	// 		console.log(`Running ${name}`)
-	// 		return await func()
-	// 	}
-	// });
-
 	await c.env.RESEARCH_WORKFLOW.create({
 		id,
 		params: obj,
@@ -195,29 +186,33 @@ app.get("/details/:id", async (c) => {
 		report_html: renderMarkdownReportContent(content),
 	};
 
-	console.log(renderMarkdownReportContent(content))
+	console.log(renderMarkdownReportContent(content));
 
 	return c.html(
 		<Layout>
 			<TopBar>
 				<div className="flex gap-2">
-					<a href="/"
-						className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+					<a
+						href="/"
+						className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+					>
 						← Back
 					</a>
 					<button
 						onClick={`rerun("${id}")`}
-						className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
+						className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100"
+					>
 						Re-run
 					</button>
 					<button
-						onClick={`delete("${id}")`}
-						className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100">
+						onClick={`deleteItem("${id}")`}
+						className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
+					>
 						Delete
 					</button>
 				</div>
 			</TopBar>
-			<ResearchDetails research={research}/>
+			<ResearchDetails research={research} />
 			<script>loadResearchDetails()</script>
 		</Layout>,
 	);
@@ -238,7 +233,7 @@ app.post("/re-run", async (c) => {
 		.execute();
 
 	if (!resp) {
-		throw new HTTPException(404, {message: "research not found"});
+		throw new HTTPException(404, { message: "research not found" });
 	}
 
 	const obj: ResearchType = {

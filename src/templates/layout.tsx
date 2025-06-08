@@ -36,41 +36,45 @@ export const Layout: FC = (props) => {
 
 const ResearchStatus: FC = (props) => {
 	if (props.status === 1) {
-		return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-			<svg
-				className="animate-spin w-3 h-3 mr-1"
-				fill="none"
-				viewBox="0 0 24 24"
-			>
-				<circle
-					className="opacity-25"
-					cx="12"
-					cy="12"
-					r="10"
-					stroke="currentColor"
-					stroke-width="4"
-				></circle>
-				<path
-					className="opacity-75"
-					fill="currentColor"
-					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-				></path>
-			</svg>
-			Processing
-		</span>;
+		return (
+			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+				<svg
+					className="animate-spin w-3 h-3 mr-1"
+					fill="none"
+					viewBox="0 0 24 24"
+				>
+					<circle
+						className="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						stroke-width="4"
+					></circle>
+					<path
+						className="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
+				</svg>
+				Processing
+			</span>
+		);
 	}
 
 	if (props.status === 2) {
-		return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-			<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-				<path
-					fill-rule="evenodd"
-					d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-					clip-rule="evenodd"
-				></path>
-			</svg>
-			Completed
-		</span>;
+		return (
+			<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+				<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+						clip-rule="evenodd"
+					></path>
+				</svg>
+				Completed
+			</span>
+		);
 	}
 
 	return (
@@ -372,41 +376,61 @@ export const ResearchDetails: FC = (props) => {
 	return (
 		<main className="max-w-4xl mx-auto px-4 py-8">
 			<div className="mb-8">
-				<h2 className="text-3xl font-bold text-gray-900 mb-2">{props.research.title}</h2>
-				<p className="text-sm text-gray-500">Generated on {props.research.created_at}</p>
+				<h2 className="text-3xl font-bold text-gray-900 mb-2">
+					{props.research.title}
+				</h2>
+				<p className="text-sm text-gray-500">
+					Generated on {props.research.created_at}
+				</p>
 			</div>
 
 			<div className="mb-8">
 				<details className="group">
-					<summary
-						className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-						<svg className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90" fill="none"
-							 stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-								  d="M9 5l7 7-7 7"></path>
+					<summary className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+						<svg
+							className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5l7 7-7 7"
+							></path>
 						</svg>
 						<span className="font-medium text-gray-700">Research Context</span>
-						<span className="text-sm text-gray-500 ml-auto">Initial query & follow-up questions</span>
+						<span className="text-sm text-gray-500 ml-auto">
+							Initial query & follow-up questions
+						</span>
 					</summary>
 
 					<div className="mt-4 space-y-6 px-4 pb-4">
 						<div>
-							<h4 className="font-semibold text-gray-900 mb-2">Initial Query</h4>
+							<h4 className="font-semibold text-gray-900 mb-2">
+								Initial Query
+							</h4>
 							<div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
 								<p className="text-gray-800">{props.research.query}</p>
 							</div>
 						</div>
 
 						<div>
-							<h4 className="font-semibold text-gray-900 mb-3">Follow-up Questions & Answers</h4>
+							<h4 className="font-semibold text-gray-900 mb-3">
+								Follow-up Questions & Answers
+							</h4>
 							<div className="space-y-4">
 								{props.research.questions.map((obj) => (
-
-								<div className="border border-gray-200 rounded-lg p-4">
-									<p className="font-medium text-gray-900 mb-2">Q: {obj.question}</p>
-									<p className="text-gray-700 bg-gray-50 p-3 rounded">A: {obj.answer}</p>
-								</div>
-							))}
+									<div className="border border-gray-200 rounded-lg p-4">
+										<p className="font-medium text-gray-900 mb-2">
+											Q: {obj.question}
+										</p>
+										<p className="text-gray-700 bg-gray-50 p-3 rounded">
+											A: {obj.answer}
+										</p>
+									</div>
+								))}
 							</div>
 						</div>
 					</div>
@@ -541,9 +565,9 @@ export const CreateResearch: FC = () => {
 			<div id="followup-section"></div>
 
 			<form id="final-form" action="/create" method="post" class="hidden">
-				<input type="hidden" name="query" id="original-query-hidden"/>
-				<input type="hidden" name="depth" id="depth-hidden"/>
-				<input type="hidden" name="breadth" id="breadth-hidden"/>
+				<input type="hidden" name="query" id="original-query-hidden" />
+				<input type="hidden" name="depth" id="depth-hidden" />
+				<input type="hidden" name="breadth" id="breadth-hidden" />
 			</form>
 		</main>
 	);

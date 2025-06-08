@@ -27,7 +27,8 @@
 			},
 			"style": {
 				"noUnusedTemplateLiteral": "off",
-				"useTemplate": "off"
+				"useTemplate": "off",
+				"useSelfClosingElements": "off"
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off",
@@ -37,7 +38,8 @@
 			"a11y": {
 				"useButtonType": "off",
 				"noSvgWithoutTitle": "off",
-				"useSemanticElements": "off"
+				"useSemanticElements": "off",
+				"noLabelWithoutControl": "off"
 			},
 			"correctness": {
 				"useJsxKeyInIterable": "off",
