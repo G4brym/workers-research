@@ -1,5 +1,7 @@
 export type ResearchType = {
 	id: string;
+	title?: string;
+	duration?: number;
 	query: string;
 	depth: string;
 	breadth: string;
@@ -15,6 +17,8 @@ export type ResearchType = {
 export type ResearchTypeDB = {
 	id: string;
 	query: string;
+	title?: string;
+	duration?: string;
 	depth: string;
 	breadth: string;
 	status: number;

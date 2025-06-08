@@ -27,7 +27,7 @@ export const Layout: FC = (props) => {
 				<title>{props.title || "workers-research"}</title>
 				<script src="https://cdn.tailwindcss.com"></script>
 				<script src="https://unpkg.com/htmx.org@2.0.0"></script>
-				<script src="core.js"></script>
+				<script src="/core.js"></script>
 			</head>
 			<body class="bg-gray-50 min-h-screen">{props.children}</body>
 		</html>
@@ -36,7 +36,7 @@ export const Layout: FC = (props) => {
 
 const ResearchStatus: FC = (props) => {
 	if (props.status === 1) {
-		<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+		return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
 			<svg
 				className="animate-spin w-3 h-3 mr-1"
 				fill="none"
@@ -61,7 +61,7 @@ const ResearchStatus: FC = (props) => {
 	}
 
 	if (props.status === 2) {
-		<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+		return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
 			<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
 				<path
 					fill-rule="evenodd"
@@ -370,119 +370,55 @@ export const ResearchList: FC = (props) => {
 
 export const ResearchDetails: FC = (props) => {
 	return (
-		<div className="card bg-base-100">
-			<div className="card-body">
-				<h3 className="card-title h-3">
-					<span class="opacity-50">Reading Research:</span>
-					<div class="mr-0 ml-auto flex gap-1">
-						<a href="/" className="btn btn-sm whitespace-nowrap">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="20"
-								height="24"
-								fill="currentColor"
-								viewBox="0 0 16 16"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"
-								/>
-							</svg>
-							Go back
-						</a>
-						<button
-							className="btn btn-sm btn-warning whitespace-nowrap"
-							onClick="document.getElementById('delete_modal').showModal()"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="16"
-								height="16"
-								fill="currentColor"
-								viewBox="0 0 16 16"
-							>
-								<path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
-							</svg>
-							Delete Research
-						</button>
-					</div>
+		<main className="max-w-4xl mx-auto px-4 py-8">
+			<div className="mb-8">
+				<h2 className="text-3xl font-bold text-gray-900 mb-2">{props.research.title}</h2>
+				<p className="text-sm text-gray-500">Generated on {props.research.created_at}</p>
+			</div>
 
-					<dialog id="delete_modal" className="modal">
-						<div className="modal-box">
-							<form method="dialog">
-								<button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
-									✕
-								</button>
-							</form>
-							<h3 className="font-bold text-lg">Are you sure?</h3>
-							<p className="py-4">Deleting the research is not reversible</p>
-							<div className="modal-action">
-								<form method="post" action="/delete">
-									<input type="hidden" name="id" value={props.research.id} />
-									<div className="flex gap-1">
-										<button className="btn btn-error" type="submit">
-											Delete
-										</button>
-									</div>
-								</form>
+			<div className="mb-8">
+				<details className="group">
+					<summary
+						className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+						<svg className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90" fill="none"
+							 stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+								  d="M9 5l7 7-7 7"></path>
+						</svg>
+						<span className="font-medium text-gray-700">Research Context</span>
+						<span className="text-sm text-gray-500 ml-auto">Initial query & follow-up questions</span>
+					</summary>
+
+					<div className="mt-4 space-y-6 px-4 pb-4">
+						<div>
+							<h4 className="font-semibold text-gray-900 mb-2">Initial Query</h4>
+							<div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
+								<p className="text-gray-800">{props.research.query}</p>
 							</div>
 						</div>
-					</dialog>
-				</h3>
-				<h2 className="card-title mb-4">{props.research.query}</h2>
 
-				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
-					<input type="checkbox" />
-					<div className="collapse-title font-semibold">
-						Research Parameters
-					</div>
-					<div className="collapse-content text-sm">
-						<div className="overflow-x-auto">
-							<table className="table">
-								<tbody>
-									<tr>
-										<th className="font-bold">Depth</th>
-										<td>{props.research.depth}</td>
-									</tr>
-									<tr>
-										<th className="font-bold">Breadth</th>
-										<td>{props.research.breadth}</td>
-									</tr>
-								</tbody>
-							</table>
+						<div>
+							<h4 className="font-semibold text-gray-900 mb-3">Follow-up Questions & Answers</h4>
+							<div className="space-y-4">
+								{props.research.questions.map((obj) => (
+
+								<div className="border border-gray-200 rounded-lg p-4">
+									<p className="font-medium text-gray-900 mb-2">Q: {obj.question}</p>
+									<p className="text-gray-700 bg-gray-50 p-3 rounded">A: {obj.answer}</p>
+								</div>
+							))}
+							</div>
 						</div>
 					</div>
-				</div>
+				</details>
+			</div>
 
-				<div className="collapse collapse-arrow border-base-300 bg-base-100 border">
-					<input type="checkbox" />
-					<div className="collapse-title font-semibold">
-						Drill-Down Questions
-					</div>
-					<div className="collapse-content text-sm">
-						<ul className="list bg-base-100 rounded-box shadow-md">
-							{props.research.questions.map((obj) => (
-								<li className="list-row">
-									<div>
-										<div>{obj.question}</div>
-										<div className="text-xs uppercase font-semibold opacity-60">
-											{obj.answer}
-										</div>
-									</div>
-								</li>
-							))}
-						</ul>
-					</div>
-				</div>
-
-				<div className="collapse collapse-open collapse-arrow border-base-300 bg-base-100 border">
-					<div className="collapse-title font-semibold">Report</div>
-					<div className="collapse-content">
-						<div className="report p-1">{html(props.research.report_html)}</div>
-					</div>
+			<div className="prose prose-lg max-w-none">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+					{html(props.research.report_html)}
 				</div>
 			</div>
-		</div>
+		</main>
 	);
 };
 
@@ -513,7 +449,7 @@ export const CreateResearch: FC = () => {
 						<textarea
 							id="initial-query"
 							name="query"
-							rows="6"
+							rows={6}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
 							placeholder="Describe your research question in detail. Be specific about what you want to learn, any particular focus areas, timeframes, or scope you're interested in..."
 							required
@@ -605,9 +541,9 @@ export const CreateResearch: FC = () => {
 			<div id="followup-section"></div>
 
 			<form id="final-form" action="/create" method="post" class="hidden">
-				<input type="hidden" name="query" id="original-query-hidden" />
-				<input type="hidden" name="depth" id="depth-hidden" />
-				<input type="hidden" name="breadth" id="breadth-hidden" />
+				<input type="hidden" name="query" id="original-query-hidden"/>
+				<input type="hidden" name="depth" id="depth-hidden"/>
+				<input type="hidden" name="breadth" id="breadth-hidden"/>
 			</form>
 		</main>
 	);

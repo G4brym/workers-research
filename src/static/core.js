@@ -1,5 +1,4 @@
 function loadNewResearch() {
-	console.log("loaded");
 	// HTMX event handlers
 	document.addEventListener("htmx:beforeRequest", (evt) => {
 		const query = document.getElementById("initial-query").value.trim();
@@ -121,4 +120,84 @@ function loadNewResearch() {
 			e.target.style.height = e.target.scrollHeight + "px";
 		}
 	});
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+	document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+		anchor.addEventListener('click', function (e) {
+			e.preventDefault();
+			document.querySelector(this.getAttribute('href'))?.scrollIntoView({
+				behavior: 'smooth'
+			});
+		});
+	});
+});
+
+function loadResearchList() {
+	// Add interactive functionality
+	document.addEventListener('DOMContentLoaded', function () {
+		// Search functionality
+		const searchInput = document.querySelector('input[type="text"]');
+		searchInput.addEventListener('input', function (e) {
+			// In a real app, this would filter the results
+			console.log('Searching for:', e.target.value);
+		});
+
+		// Filter dropdowns
+		const filterSelects = document.querySelectorAll('select');
+		filterSelects.forEach(select => {
+			select.addEventListener('change', function (e) {
+				// In a real app, this would filter the results
+				console.log('Filter changed:', e.target.value);
+			});
+		});
+
+		// Action buttons
+		const actionButtons = document.querySelectorAll('button');
+		actionButtons.forEach(button => {
+			if (button.textContent.includes('View') || button.textContent.includes('Continue') || button.textContent.includes('Retry')) {
+				button.addEventListener('click', function (e) {
+					e.preventDefault();
+					console.log('Action clicked:', button.textContent);
+					// In a real app, this would navigate to the appropriate page
+				});
+			}
+		});
+	});
+}
+
+function loadResearchDetails() {
+	function rerun(id) {
+    if (confirm('Are you sure you want to rerun this item?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/re-run';
+
+        const idField = document.createElement('input');
+        idField.type = 'hidden';
+        idField.name = 'id';
+        idField.value = id;
+
+        form.appendChild(idField);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function deleteItem(id) {
+    if (confirm('Are you sure you want to delete this item?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete';
+
+        const idField = document.createElement('input');
+        idField.type = 'hidden';
+        idField.name = 'id';
+        idField.value = id;
+
+        form.appendChild(idField);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
 }
