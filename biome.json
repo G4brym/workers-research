@@ -28,7 +28,8 @@
 			"style": {
 				"noUnusedTemplateLiteral": "off",
 				"useTemplate": "off",
-				"useSelfClosingElements": "off"
+				"useSelfClosingElements": "off",
+				"noUselessElse": "off"
 			},
 			"complexity": {
 				"noStaticOnlyClass": "off",

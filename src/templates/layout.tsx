@@ -1,16 +1,16 @@
 import { html } from "hono/html";
 import type { FC } from "hono/jsx";
-import type { ResearchType } from "../types";
-import { timeAgo } from "../utils";
+import type { ResearchTypeDB } from "../types";
+import { formatDuration } from "../utils";
 
 export const TopBar: FC = (props) => {
 	return (
 		<header className="bg-white border-b border-gray-200 sticky top-0 z-10">
 			<div className="max-w-6xl mx-auto px-4 py-4">
 				<div className="flex items-center justify-between">
-					<h1 className="text-xl font-semibold text-gray-900">
+					<a href="/" className="text-xl font-semibold text-gray-900">
 						workers-research
-					</h1>
+					</a>
 					{props.children}
 				</div>
 			</div>
@@ -91,7 +91,19 @@ const ResearchStatus: FC = (props) => {
 	);
 };
 
-export const ResearchList: FC = (props) => {
+interface ResearchListProps {
+	researches: { results: ResearchTypeDB[]; totalCount: number };
+	page: number;
+	totalCompleted: number;
+	totalProcessing: number;
+	avgDuration: string;
+}
+
+export const ResearchList: FC<ResearchListProps> = (props) => {
+	const pageSize = 5;
+	const totalPages = Math.ceil(props.researches.totalCount / pageSize);
+	const currentPage = props.page || 1;
+
 	if (props.researches.results.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center py-16 px-4">
@@ -110,7 +122,6 @@ export const ResearchList: FC = (props) => {
 						></path>
 					</svg>
 				</div>
-
 				<h3 className="text-xl font-semibold text-gray-900 mb-2">
 					No research reports yet
 				</h3>
@@ -118,7 +129,6 @@ export const ResearchList: FC = (props) => {
 					Start your first deep research project to generate comprehensive
 					reports with AI-powered insights and analysis.
 				</p>
-
 				<a
 					href="/create"
 					className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
@@ -138,7 +148,6 @@ export const ResearchList: FC = (props) => {
 					</svg>
 					Create Your First Research
 				</a>
-
 				<div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl">
 					<div className="text-center">
 						<div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
@@ -163,7 +172,6 @@ export const ResearchList: FC = (props) => {
 							Get personalized follow-up questions to refine your research scope
 						</p>
 					</div>
-
 					<div className="text-center">
 						<div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
 							<svg
@@ -186,7 +194,6 @@ export const ResearchList: FC = (props) => {
 							recommendations
 						</p>
 					</div>
-
 					<div className="text-center">
 						<div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
 							<svg
@@ -209,7 +216,6 @@ export const ResearchList: FC = (props) => {
 						</p>
 					</div>
 				</div>
-
 				<div className="mt-8 text-center">
 					<p className="text-xs text-gray-500">
 						Your research history and reports will appear here once you start
@@ -230,43 +236,6 @@ export const ResearchList: FC = (props) => {
 					Manage and review your deep research projects
 				</p>
 			</div>
-			<div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-				<div className="flex gap-3">
-					<select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-						<option>All Status</option>
-						<option>Completed</option>
-						<option>Processing</option>
-						<option>Failed</option>
-						<option>Draft</option>
-					</select>
-					<select class="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-						<option>Last 30 days</option>
-						<option>Last 7 days</option>
-						<option>Last 3 months</option>
-						<option>All time</option>
-					</select>
-				</div>
-				<div className="relative">
-					<input
-						type="text"
-						placeholder="Search reports..."
-						class="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-64"
-					/>
-					<svg
-						class="absolute left-3 top-2.5 h-4 w-4 text-gray-400"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-						></path>
-					</svg>
-				</div>
-			</div>
 
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 				<div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
@@ -280,11 +249,11 @@ export const ResearchList: FC = (props) => {
 				</div>
 
 				<div className="divide-y divide-gray-200">
-					{(props.researches.results as ResearchType[]).map((obj) => (
+					{props.researches.results.map((obj) => (
 						<div className="px-6 py-4 hover:bg-gray-50 transition-colors">
 							<div className="grid grid-cols-12 gap-4 items-center">
 								<div className="col-span-5">
-									<h3 class="font-medium text-gray-900 mb-1">
+									<h3 className="font-medium text-gray-900 mb-1">
 										{obj.title ?? ""}
 									</h3>
 									<p className="text-sm text-gray-600 line-clamp-1">
@@ -295,19 +264,23 @@ export const ResearchList: FC = (props) => {
 									<ResearchStatus status={obj.status} />
 								</div>
 								<div className="col-span-2">
-									<div className="text-sm text-gray-900">Mar 15, 2024</div>
-									<div className="text-xs text-gray-500">2:30 PM</div>
+									<div className="text-sm text-gray-900">
+										{obj.created_at ? obj.created_at.split(" ")[0] : ""}
+									</div>
+									<div className="text-xs text-gray-500">
+										{obj.created_at ? obj.created_at.split(" ")[1] : ""}
+									</div>
 								</div>
 								<div className="col-span-2">
 									<div className="text-sm text-gray-900">
-										{obj.duration ?? ""}
+										{obj.duration ? formatDuration(obj.duration) : "--"}
 									</div>
 									<div className="text-xs text-gray-500">Research time</div>
 								</div>
 								<div className="col-span-1">
 									<a
-										href={"/details/" + obj.id}
-										class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+										href={`/details/${obj.id}`}
+										className="text-blue-600 hover:text-blue-800 text-sm font-medium"
 									>
 										View
 									</a>
@@ -320,51 +293,68 @@ export const ResearchList: FC = (props) => {
 
 			<div className="mt-6 flex items-center justify-between">
 				<div className="text-sm text-gray-700">
-					Showing <span class="font-medium">1</span> to{" "}
-					<span class="font-medium">5</span> of{" "}
-					<span class="font-medium">23</span> results
+					Showing{" "}
+					<span className="font-medium">
+						{(currentPage - 1) * pageSize + 1}
+					</span>{" "}
+					to{" "}
+					<span className="font-medium">
+						{Math.min(currentPage * pageSize, props.researches.totalCount)}
+					</span>{" "}
+					of <span className="font-medium">{props.researches.totalCount}</span>{" "}
+					results
 				</div>
-				<nav class="flex items-center gap-2">
-					<button
-						class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-						disabled
+				<nav className="flex items-center gap-2">
+					<a
+						className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={currentPage === 1}
+						href={`/?page=${currentPage - 1}`}
 					>
 						Previous
-					</button>
-					<button class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">
-						1
-					</button>
-					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-						2
-					</button>
-					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-						3
-					</button>
-					<span class="px-3 py-2 text-sm text-gray-500">...</span>
-					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-						5
-					</button>
-					<button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+					</a>
+					{Array.from({ length: totalPages }, (_, i) => i + 1).map(
+						(pageNum) => (
+							<a
+								className={`px-3 py-2 text-sm font-medium ${pageNum === currentPage ? "text-white bg-blue-600 border-blue-600" : "text-gray-700 bg-white border-gray-300"} border rounded-md hover:bg-gray-50`}
+								href={`/?page=${pageNum}`}
+							>
+								{pageNum}
+							</a>
+						),
+					)}
+					<a
+						className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={currentPage === totalPages}
+						href={`/?page=${currentPage + 1}`}
+					>
 						Next
-					</button>
+					</a>
 				</nav>
 			</div>
 
 			<div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
 				<div className="bg-white p-4 rounded-lg border border-gray-200">
-					<div className="text-2xl font-bold text-gray-900">23</div>
+					<div className="text-2xl font-bold text-gray-900">
+						{props.researches.totalCount}
+					</div>
 					<div className="text-sm text-gray-600">Total Reports</div>
 				</div>
 				<div className="bg-white p-4 rounded-lg border border-gray-200">
-					<div className="text-2xl font-bold text-green-600">18</div>
+					<div className="text-2xl font-bold text-green-600">
+						{props.totalCompleted}
+					</div>
 					<div className="text-sm text-gray-600">Completed</div>
 				</div>
 				<div className="bg-white p-4 rounded-lg border border-gray-200">
-					<div className="text-2xl font-bold text-yellow-600">2</div>
+					<div className="text-2xl font-bold text-yellow-600">
+						{props.totalProcessing}
+					</div>
 					<div className="text-sm text-gray-600">Processing</div>
 				</div>
 				<div className="bg-white p-4 rounded-lg border border-gray-200">
-					<div className="text-2xl font-bold text-gray-900">9.2 min</div>
+					<div className="text-2xl font-bold text-gray-900">
+						{props.avgDuration}
+					</div>
 					<div className="text-sm text-gray-600">Avg. Duration</div>
 				</div>
 			</div>
@@ -614,7 +604,7 @@ export const NewResearchQuestions: FC = (props) => {
 				<button
 					type="button"
 					id="start-research-btn"
-					className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+					className="flex items-center px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
 				>
 					Start Deep Research
 				</button>

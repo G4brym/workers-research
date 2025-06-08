@@ -45,12 +45,22 @@ async function deepResearch({
 
 	for (const serpQuery of serpQueries) {
 		const result = await step.do("get new learnings", async () => {
-			return await webSearch(
-				await browser.getActiveBrowser(),
-				serpQuery.query,
-				5,
-			);
+			try {
+				return await webSearch(
+					await browser.getActiveBrowser(),
+					serpQuery.query,
+					5,
+				);
+			} catch (e) {
+				console.error(e);
+				return null;
+			}
 		});
+
+		if (!result) {
+			// web search provably failed, no learnings to get
+			continue;
+		}
 
 		const newUrls = result.map((item) => item.url).filter(Boolean);
 		const newBreadth = Math.ceil(breadth / 2);
@@ -233,7 +243,11 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			await qb
 				.update({
 					tableName: "researches",
-					data: { status: 2, result: report },
+					data: {
+						status: 2,
+						result: report,
+						duration: Date.now() - event.payload.start_ms,
+					},
 					where: { conditions: "id = ?", params: [id] },
 				})
 				.execute();
@@ -251,6 +265,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 					tableName: "researches",
 					data: {
 						status: 3,
+						duration: Date.now() - event.payload.start_ms,
 						result: `Error: ${error.message}\n\n${error.stack ?? ""}`,
 					},
 					where: { conditions: "id = ?", params: [event.payload.id] },

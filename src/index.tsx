@@ -1,4 +1,4 @@
-import { LoadAPIKeyError, generateObject } from "ai";
+import { LoadAPIKeyError, generateObject, generateText } from "ai";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { marked } from "marked";
@@ -6,7 +6,11 @@ import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
 import { renderMarkdownReportContent } from "./markdown";
-import { FOLLOWUP_QUESTIONS_PROMPT } from "./prompts";
+import {
+	FOLLOWUP_QUESTIONS_PROMPT,
+	RESEARCH_PROMPT,
+	SUMMARIZE_PROMPT,
+} from "./prompts";
 import {
 	CreateResearch,
 	Layout,
@@ -16,7 +20,7 @@ import {
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
-import { getModel } from "./utils";
+import { formatDuration, getModel } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -24,10 +28,35 @@ export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
-	const researches = await qb
+	const { page = "1" } = c.req.query();
+	const pageSize = 5; // Items per page
+	const offset = (Number.parseInt(page) - 1) * pageSize;
+
+	// Build the query with filters
+	const queryBuilder = qb
 		.select<ResearchTypeDB>("researches")
-		.orderBy("created_at desc")
-		.all();
+		.orderBy("created_at desc nulls last");
+
+	// Fetch paginated results
+	const researches = await queryBuilder.limit(pageSize).offset(offset).all();
+
+	// Fetch total count for pagination
+	const totalCount = (await qb.select<ResearchTypeDB>("researches").count())
+		.results.total;
+
+	const totalCompleted = (
+		await qb.select("researches").where("status = 2").count()
+	).results.total;
+	const totalProcessing = (
+		await qb.select("researches").where("status = 1").count()
+	).results.total;
+	const avgDuration = (
+		await qb
+			.select<{ avg: number }>("researches")
+			.fields("avg(duration) as avg")
+			.where("duration is not null")
+			.one()
+	).results.avg;
 
 	return c.html(
 		<Layout>
@@ -39,8 +68,16 @@ app.get("/", async (c) => {
 					+ New Research
 				</a>
 			</TopBar>
-			<ResearchList researches={researches} />
-			<script>loadResearchList()</script>
+			<ResearchList
+				researches={{
+					results: researches.results,
+					totalCount: totalCount,
+				}}
+				page={Number.parseInt(page)}
+				totalCompleted={totalCompleted}
+				totalProcessing={totalProcessing}
+				avgDuration={avgDuration ? formatDuration(avgDuration) : "--"}
+			/>
 		</Layout>,
 	);
 });
@@ -130,8 +167,15 @@ app.post("/create", async (c) => {
 		answer: answers[i],
 	}));
 
+	const { text: title } = await generateText({
+		model: getModel(c.env),
+		system: SUMMARIZE_PROMPT(),
+		prompt: form.get("query") as string,
+	});
+
 	const obj: ResearchType = {
 		id,
+		title,
 		query: form.get("query") as string,
 		depth: form.get("depth") as string,
 		breadth: form.get("breadth") as string,
@@ -141,7 +185,10 @@ app.post("/create", async (c) => {
 
 	await c.env.RESEARCH_WORKFLOW.create({
 		id,
-		params: obj,
+		params: {
+			...obj,
+			start_ms: Date.now(),
+		},
 	});
 
 	const qb = new D1QB(c.env.DB);
@@ -185,8 +232,6 @@ app.get("/details/:id", async (c) => {
 		questions: JSON.parse(resp.results.questions as unknown as string),
 		report_html: renderMarkdownReportContent(content),
 	};
-
-	console.log(renderMarkdownReportContent(content));
 
 	return c.html(
 		<Layout>

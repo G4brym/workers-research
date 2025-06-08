@@ -64,3 +64,26 @@ export function timeAgo(date: Date): string {
 export async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export function formatDuration(ms: number): string {
+	// Handle negative or zero values
+	if (ms <= 0) {
+		return "0.0 seconds";
+	}
+
+	const seconds = ms / 1000;
+	const minutes = seconds / 60;
+	const hours = minutes / 60;
+	const days = hours / 24;
+
+	// Determine the appropriate unit and format with one decimal place
+	if (days >= 1) {
+		return `${days.toFixed(1)} day${days !== 1 ? "s" : ""}`;
+	} else if (hours >= 1) {
+		return `${hours.toFixed(1)} hour${hours !== 1 ? "s" : ""}`;
+	} else if (minutes >= 1) {
+		return `${minutes.toFixed(1)} minute${minutes !== 1 ? "s" : ""}`;
+	} else {
+		return `${seconds.toFixed(1)} second${seconds !== 1 ? "s" : ""}`;
+	}
+}
