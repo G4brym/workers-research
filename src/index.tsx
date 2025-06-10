@@ -1,18 +1,15 @@
 import { LoadAPIKeyError, generateObject, generateText } from "ai";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { marked } from "marked";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
 import { renderMarkdownReportContent } from "./markdown";
-import {
-	FOLLOWUP_QUESTIONS_PROMPT,
-	RESEARCH_PROMPT,
-	SUMMARIZE_PROMPT,
-} from "./prompts";
+import { migrations } from "./migrations";
+import { FOLLOWUP_QUESTIONS_PROMPT, SUMMARIZE_PROMPT } from "./prompts";
 import {
 	CreateResearch,
+	ErrorPage,
 	Layout,
 	NewResearchQuestions,
 	ResearchDetails,
@@ -25,6 +22,28 @@ import { formatDuration, getModel } from "./utils";
 export { ResearchWorkflow } from "./workflows";
 
 export const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+let MigrationsApplied = false;
+app.use(async (c, next) => {
+	if (!MigrationsApplied) {
+		const qb = new D1QB(c.env.DB);
+		await qb.migrations({ migrations, tableName: "d1_migrations" }).apply();
+		MigrationsApplied = true;
+	}
+
+	await next();
+});
+
+app.onError((err, c) => {
+	console.error(`${err}`);
+	return c.html(
+		<ErrorPage>
+			<h2>{err.name}</h2>
+			<p>{err.message}</p>
+		</ErrorPage>,
+		500,
+	);
+});
 
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
@@ -128,20 +147,13 @@ app.post("/create/questions", async (c) => {
 	} catch (e) {
 		if (e instanceof LoadAPIKeyError) {
 			return c.html(
-				<Layout>
+				<ErrorPage>
 					<p>Provided GOOGLE_API_KEY is invalid!</p>
 					<p>
 						Please set GOOGLE_API_KEY in your environment variables, using
 						command "npx wrangler secret put GOOGLE_API_KEY"
 					</p>
-					<p>
-						Learn more here{" "}
-						<a href="https://github.com/G4brym/workers-research">
-							github.com/G4brym/workers-research
-						</a>
-						.
-					</p>
-				</Layout>,
+				</ErrorPage>,
 			);
 		}
 
@@ -244,12 +256,14 @@ app.get("/details/:id", async (c) => {
 						← Back
 					</a>
 					<button
+						// @ts-ignore
 						onClick={`rerun("${id}")`}
 						className="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100"
 					>
 						Re-run
 					</button>
 					<button
+						// @ts-ignore
 						onClick={`deleteItem("${id}")`}
 						className="px-3 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
 					>

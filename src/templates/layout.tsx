@@ -617,3 +617,39 @@ export const NewResearchQuestions: FC = (props) => {
 		</div>
 	);
 };
+
+export const ErrorPage: FC = (props) => {
+	return (
+		<Layout title="Error">
+			<TopBar />
+			<main className="max-w-4xl mx-auto px-4 py-8">
+				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+					<h2 className="text-2xl font-bold text-red-600 mb-4">
+						An Error Occurred
+					</h2>
+					{props.children}
+					<div className="flex mt-6 mb-4">
+						<a
+							href="/"
+							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+						>
+							Return to Home
+						</a>
+					</div>
+					<div className="flex">
+						<span>
+							If this error is not expected, please open an issue on the{" "}
+							<a
+								class="underline"
+								href="https://github.com/G4brym/workers-research"
+							>
+								Github Repository here
+							</a>
+							.
+						</span>
+					</div>
+				</div>
+			</main>
+		</Layout>
+	);
+};

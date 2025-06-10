@@ -72,27 +72,23 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
    ```
    **Important:** Replace `"replace-me"` in your `wrangler.toml` file with the `database_id` output from the command above.
 
-5. **Apply Database Migrations:**
-   Apply D1 database migrations using Wrangler:
-   ```bash
-   wrangler d1 migrations apply DB --remote
-   ```
+	Database migrations are applied automatically.
 
-6. **Deploy to Cloudflare Workers:**
+5. **Deploy to Cloudflare Workers:**
    Deploy your worker to Cloudflare:
    ```bash
    wrangler deploy
    ```
    This will deploy your worker to `workers-research.{your-user}.workers.dev` (or your custom domain if configured).
 
-7. **Set up API Keys:**
+6. **Set up API Keys:**
    - **Google AI Studio API Key:** Obtain from [https://aistudio.google.com](https://aistudio.google.com).
    - Upload API Keys into workers:
      ```bash
      npx wrangler secret put GOOGLE_API_KEY
      ```
 
-8. **(Optional) Configure Cloudflare AI Gateway:**
+7. **(Optional) Configure Cloudflare AI Gateway:**
    - Create an AI Gateway in your Cloudflare account dashboard.
    - Configure the gateway with your preferred settings.
    - Set the required environment variables:
@@ -105,7 +101,7 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
      npx wrangler secret put AI_GATEWAY_API_KEY
      ```
 
-9. **Access the Dashboard:**
+8. **Access the Dashboard:**
    Open your deployed worker URL (e.g., `https://workers-research.{your-user}.workers.dev`) in your browser to access the research dashboard.
 
 ## ✍️ Usage

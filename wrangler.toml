@@ -23,8 +23,8 @@ class_name = "ResearchWorkflow"
 [[d1_databases]]
 binding = "DB"
 database_name = "workers-research"
-database_id = "replace-me"
-preview_database_id = "replace-me"
+database_id = "db6662eb-c46e-461f-9bce-05807b6dfa98"
+preview_database_id = "db6662eb-c46e-461f-9bce-05807b6dfa98"
 
 [browser]
 binding = "BROWSER"
