@@ -269,6 +269,13 @@ app.get("/details/:id", async (c) => {
 					>
 						Delete
 					</button>
+					<button
+						// @ts-ignore
+						onClick={`downloadReport('report.md', decodeURIComponent('${encodeURIComponent(content)}'))`}
+						className="px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100"
+					>
+						Download Report
+					</button>
 				</div>
 			</TopBar>
 			<ResearchDetails research={research} />

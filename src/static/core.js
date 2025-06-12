@@ -187,6 +187,17 @@ function rerun(id) {
 	}
 }
 
+function downloadReport(filename, content) {
+	const blob = new Blob([content], { type: "text/markdown;charset=utf-8;" });
+	const link = document.createElement("a");
+	link.href = URL.createObjectURL(blob);
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	URL.revokeObjectURL(link.href);
+}
+
 function deleteItem(id) {
 	if (confirm("Are you sure you want to delete this item?")) {
 		const form = document.createElement("form");
