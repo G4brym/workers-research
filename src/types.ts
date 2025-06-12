@@ -13,6 +13,7 @@ export type ResearchType = {
 	result?: string;
 	created_at?: string;
 	start_ms?: number;
+	initialLearnings?: string;
 };
 
 export type ResearchTypeDB = {
@@ -26,4 +27,5 @@ export type ResearchTypeDB = {
 	questions: string;
 	result?: string;
 	created_at?: string;
+	initialLearnings?: string;
 };

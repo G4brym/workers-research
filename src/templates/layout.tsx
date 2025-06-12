@@ -478,6 +478,24 @@ export const CreateResearch: FC = () => {
 							follow-up questions to gather relevant information.
 						</p>
 					</div>
+					<div class="mb-6">
+						<label
+							htmlFor="initial-learnings"
+							className="block text-sm font-medium text-gray-700 mb-2"
+						>
+							Initial Learnings (Optional)
+						</label>
+						<textarea
+							id="initial-learnings"
+							name="initial-learnings"
+							rows={4}
+							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+							placeholder="Enter any initial data or learnings you have, one per line..."
+						></textarea>
+						<p className="mt-2 text-sm text-gray-500">
+							Providing initial learnings can help the AI generate more relevant and insightful questions.
+						</p>
+					</div>
 					<div className="flex">
 						<div className="grow mr-2">
 							<label
@@ -517,7 +535,7 @@ export const CreateResearch: FC = () => {
 						id="generate-questions-btn"
 						hx-post="/create/questions"
 						hx-target="#followup-section"
-						hx-include="#initial-query"
+						hx-include="#initial-query, #initial-learnings"
 						hx-indicator="#loading-questions"
 						class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 					>
@@ -563,6 +581,7 @@ export const CreateResearch: FC = () => {
 				<input type="hidden" name="query" id="original-query-hidden" />
 				<input type="hidden" name="depth" id="depth-hidden" />
 				<input type="hidden" name="breadth" id="breadth-hidden" />
+				<input type="hidden" name="initial-learnings" id="initial-learnings-hidden" />
 			</form>
 		</main>
 	);

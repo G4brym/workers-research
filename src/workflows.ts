@@ -24,7 +24,7 @@ async function deepResearch({
 	query,
 	breadth,
 	depth,
-	learnings,
+	learnings: initialLearningsParam, // Renamed to avoid conflict
 	visitedUrls,
 }: {
 	step: WorkflowStep;
@@ -33,14 +33,14 @@ async function deepResearch({
 	query: string;
 	breadth: number;
 	depth: number;
-	learnings: string[];
+	learnings: string[]; // Keep this as string[]
 	visitedUrls: string[];
 }) {
 	const serpQueries = await step.do("get serp queries", () =>
-		generateSerpQueries({ env, query, learnings, numQueries: breadth }),
+		generateSerpQueries({ env, query, learnings: initialLearningsParam, numQueries: breadth }),
 	);
 
-	let allLearnings = [...learnings];
+	let allLearnings = [...initialLearningsParam]; // Use the passed learnings
 	let allUrls = [...visitedUrls];
 
 	for (const serpQuery of serpQueries) {
@@ -210,10 +210,12 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 		try {
 			console.log("Starting workflow");
 
-			const { query, questions, breadth, depth, id } = event.payload;
+			const { query, questions, breadth, depth, id, initialLearnings } = event.payload;
 			const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
 				.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
 				.join("\n")}`;
+
+			const processedLearnings = initialLearnings && initialLearnings.trim().length > 0 ? initialLearnings.split("\n") : [];
 
 			const browser = await getBrowser(this.env);
 
@@ -225,7 +227,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				query: fullQuery,
 				breadth: Number.parseInt(breadth),
 				depth: Number.parseInt(depth),
-				learnings: [],
+				learnings: processedLearnings,
 				visitedUrls: [],
 			});
 
