@@ -411,6 +411,19 @@ export const ResearchDetails: FC = (props) => {
 							</div>
 						</div>
 
+						{props.research.initialLearnings && props.research.initialLearnings.trim() !== "" && (
+							<div>
+								<h4 className="font-semibold text-gray-900 mb-2">
+									Initial Learnings
+								</h4>
+								<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
+									{props.research.initialLearnings.split('\n').map((line: string, index: number) => (
+										<p key={index} className="text-gray-800">{line}</p>
+									))}
+								</div>
+							</div>
+						)}
+
 						<div>
 							<h4 className="font-semibold text-gray-900 mb-3">
 								Follow-up Questions & Answers
