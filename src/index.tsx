@@ -269,19 +269,43 @@ app.get("/details/:id", async (c) => {
 					>
 						Delete
 					</button>
-					<button
-						// @ts-ignore
-						onClick={`downloadReport('report.md', decodeURIComponent('${encodeURIComponent(content)}'))`}
+					<a
+						href={`/details/${id}/download/markdown`}
+						download="report.md"
 						className="px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100"
 					>
 						Download Report
-					</button>
+					</a>
 				</div>
 			</TopBar>
 			<ResearchDetails research={research} />
 			<script>loadResearchDetails()</script>
 		</Layout>,
 	);
+});
+
+app.get("/details/:id/download/markdown", async (c) => {
+	const id = c.req.param("id");
+	const qb = new D1QB(c.env.DB);
+	const resp = await qb
+		.fetchOne<ResearchTypeDB>({
+			tableName: "researches",
+			where: {
+				conditions: ["id = ?"],
+				params: [id],
+			},
+		})
+		.execute();
+
+	if (!resp.results) {
+		throw new HTTPException(404, { message: "Research not found" });
+	}
+
+	const content = resp.results.result ?? "";
+
+	c.header("Content-Type", "text/markdown; charset=utf-8");
+	c.header("Content-Disposition", 'attachment; filename="report.md"');
+	return c.text(content);
 });
 
 app.post("/re-run", async (c) => {
