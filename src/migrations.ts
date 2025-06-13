@@ -34,4 +34,11 @@ export const migrations: Migration[] = [
 			add duration integer;
     `,
 	},
+	{
+		name: "0004_add_initial_learnings_column.sql",
+		sql: `
+		ALTER TABLE researches
+		ADD COLUMN initialLearnings TEXT;
+    `,
+	},
 ];

@@ -185,32 +185,37 @@ app.post("/create", async (c) => {
 		prompt: form.get("query") as string,
 	});
 
-	const obj: ResearchType = {
+	const initialLearnings = form.get("initial-learnings") as string | undefined;
+
+	const researchData: ResearchType = {
 		id,
 		title,
 		query: form.get("query") as string,
 		depth: form.get("depth") as string,
 		breadth: form.get("breadth") as string,
 		questions: processedQuestions,
-		status: 1,
+		status: 1, // Starting status
+		initialLearnings: initialLearnings || "", // Ensure it's a string
 	};
 
 	await c.env.RESEARCH_WORKFLOW.create({
 		id,
 		params: {
-			...obj,
+			...researchData,
 			start_ms: Date.now(),
 		},
 	});
+
+	const dbData = {
+		...researchData,
+		questions: JSON.stringify(researchData.questions),
+	};
 
 	const qb = new D1QB(c.env.DB);
 	await qb
 		.insert({
 			tableName: "researches",
-			data: {
-				...obj,
-				questions: JSON.stringify(obj.questions),
-			},
+			data: dbData,
 		})
 		.execute();
 
@@ -269,43 +274,12 @@ app.get("/details/:id", async (c) => {
 					>
 						Delete
 					</button>
-					<a
-						href={`/details/${id}/download/markdown`}
-						download="report.md"
-						className="px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100"
-					>
-						Download Report
-					</a>
 				</div>
 			</TopBar>
 			<ResearchDetails research={research} />
 			<script>loadResearchDetails()</script>
 		</Layout>,
 	);
-});
-
-app.get("/details/:id/download/markdown", async (c) => {
-	const id = c.req.param("id");
-	const qb = new D1QB(c.env.DB);
-	const resp = await qb
-		.fetchOne<ResearchTypeDB>({
-			tableName: "researches",
-			where: {
-				conditions: ["id = ?"],
-				params: [id],
-			},
-		})
-		.execute();
-
-	if (!resp.results) {
-		throw new HTTPException(404, { message: "Research not found" });
-	}
-
-	const content = resp.results.result ?? "";
-
-	c.header("Content-Type", "text/markdown; charset=utf-8");
-	c.header("Content-Disposition", 'attachment; filename="report.md"');
-	return c.text(content);
 });
 
 app.post("/re-run", async (c) => {
@@ -326,27 +300,36 @@ app.post("/re-run", async (c) => {
 		throw new HTTPException(404, { message: "research not found" });
 	}
 
-	const obj: ResearchType = {
+	const originalResearch = resp.results;
+
+	const newResearchData: ResearchType = {
 		id: crypto.randomUUID(),
-		query: resp.results.query,
-		depth: resp.results.depth,
-		breadth: resp.results.breadth,
-		questions: JSON.parse(resp.results.questions as unknown as string),
-		status: 1,
+		title: originalResearch.title, // Carry over title
+		query: originalResearch.query,
+		depth: originalResearch.depth,
+		breadth: originalResearch.breadth,
+		questions: JSON.parse(originalResearch.questions as unknown as string),
+		status: 1, // Starting status
+		initialLearnings: originalResearch.initialLearnings || "", // Carry over initial learnings
 	};
 
 	await c.env.RESEARCH_WORKFLOW.create({
-		id: obj.id,
-		params: obj,
+		id: newResearchData.id,
+		params: {
+			...newResearchData,
+			start_ms: Date.now(), // Add start_ms for the new workflow
+		},
 	});
+
+	const dbData = {
+		...newResearchData,
+		questions: JSON.stringify(newResearchData.questions),
+	};
 
 	await qb
 		.insert({
 			tableName: "researches",
-			data: {
-				...obj,
-				questions: JSON.stringify(obj.questions),
-			},
+			data: dbData,
 		})
 		.execute();
 
