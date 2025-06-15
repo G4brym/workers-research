@@ -40,11 +40,6 @@ async function deepResearch({
 	qb: D1QB;
 	researchId: string;
 }) {
-	await addResearchStatusHistoryEntry(
-		qb,
-		researchId,
-		`Generating SERP queries for research goal: ${query}`,
-	);
 	const serpQueries = await step.do("generate_serp_queries", () =>
 		generateSerpQueries({
 			env,
@@ -91,11 +86,6 @@ async function deepResearch({
 			// web search provably failed, no learnings to get
 			continue;
 		}
-		await addResearchStatusHistoryEntry(
-			qb,
-			researchId,
-			`Processing results for SERP query: ${serpQuery.query}`,
-		);
 
 		const newUrls = result.map((item) => item.url).filter(Boolean);
 		const newBreadth = Math.ceil(breadth / 2);
@@ -318,15 +308,6 @@ async function addResearchStatusHistoryEntry(
 	researchId: string,
 	statusText: string,
 ) {
-	const messagesToFilter = [
-		"Generating SERP queries for research",
-		"processing serp results",
-	];
-
-	if (messagesToFilter.some(msg => statusText.includes(msg))) {
-		return;
-	}
-
 	try {
 		await db
 			.insert({

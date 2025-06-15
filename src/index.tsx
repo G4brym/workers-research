@@ -226,7 +226,7 @@ app.post("/create", async (c) => {
 		})
 		.execute();
 
-	return c.redirect("/");
+	return c.redirect(`/details/${id}`);
 });
 
 app.get("/details/:id", async (c) => {
@@ -371,7 +371,7 @@ app.post("/re-run", async (c) => {
 		})
 		.execute();
 
-	return c.redirect("/");
+	return c.redirect(`/details/${newResearchData.id}`);
 });
 
 app.post("/delete", async (c) => {
