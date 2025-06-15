@@ -426,7 +426,7 @@ export const ResearchDetails: FC = (props) => {
 	const statusUpdateIndicatorId = `status-update-indicator-${researchData.id}`;
 
 	let htmxPollingProps = {};
-	if (researchData.status === 1 && !researchData.isPartial) {
+    if (researchData.status === 1) {
 		htmxPollingProps = {
 			"hx-get": `/details/${researchData.id}?partial=true`,
 			"hx-trigger": "every 5s",
