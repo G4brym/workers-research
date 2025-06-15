@@ -48,10 +48,17 @@ async function performSearch(
 async function extractContent(
 	browser: Browser,
 	url: string,
+	logCrawlUrl?: (url: string) => Promise<void>,
 ): Promise<SearchResult> {
 	const page = await browser.newPage();
 	try {
-		const response = await page.goto(url, { waitUntil: "domcontentloaded" });
+		if (logCrawlUrl) {
+			await logCrawlUrl(url);
+		}
+		const response = await page.goto(url, {
+			waitUntil: "domcontentloaded",
+			timeout: 20000,
+		});
 
 		// Attempt to close popups
 		await page.evaluate(() => {
@@ -147,12 +154,22 @@ export async function webSearch(
 	browser: Browser,
 	query: string,
 	limit: number,
+	logCrawlUrl?: (url: string) => Promise<void>,
 ): Promise<SearchResult[]> {
 	const searchResults = await performSearch(browser, query, limit);
 
 	const promises: Array<Promise<SearchResult>> = [];
 	for (const result of searchResults) {
-		promises.push(extractContent(browser, result));
+		promises.push(extractCrawlContent(browser, result, logCrawlUrl));
+	}
+
+	// Helper function name changed to avoid potential confusion if extractContent is used elsewhere without the callback
+	async function extractCrawlContent(
+		browser: Browser,
+		url: string,
+		logCrawlUrl?: (url: string) => Promise<void>,
+	): Promise<SearchResult> {
+		return extractContent(browser, url, logCrawlUrl);
 	}
 
 	return await Promise.all(promises);

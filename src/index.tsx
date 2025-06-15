@@ -15,6 +15,7 @@ import {
 	ResearchDetails,
 	ResearchList,
 	TopBar,
+	ResearchStatusHistoryDisplay,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import { formatDuration, getModel } from "./utils";
@@ -405,3 +406,30 @@ app.post("/delete", async (c) => {
 });
 
 export default app;
+
+app.get("/research/:id/status", async (c) => {
+	const id = c.req.param("id");
+	const qb = new D1QB(c.env.DB);
+
+	const history = await qb
+		.select<{ status_text: string; timestamp: string }>(
+			"research_status_history",
+		)
+		.where("research_id = ?", id)
+		.orderBy("timestamp desc")
+		.limit(10)
+		.all();
+
+	if (!history.results || history.results.length === 0) {
+		// Optionally, check if the research ID itself is valid
+		const researchCheck = await qb
+			.select<{ id: string }>("researches")
+			.where("id = ?", id)
+			.one();
+		if (!researchCheck.results) {
+			throw new HTTPException(404, { message: "Research not found" });
+		}
+	}
+
+	return c.html(<ResearchStatusHistoryDisplay statusHistory={history.results} />);
+});

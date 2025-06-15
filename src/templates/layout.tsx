@@ -22,6 +22,41 @@ export const TopBar: FC = (props) => {
 	);
 };
 
+export const ResearchStatusHistoryDisplay: FC<{ statusHistory: { status_text: string, timestamp: string }[] }> = (props) => {
+	if (!props.statusHistory || props.statusHistory.length === 0) {
+		return <p class="text-sm text-gray-600">No status updates yet.</p>;
+	}
+
+	return (
+		// Removed mt-8, h3 title, and outer div. The parent container will handle margins.
+		// The hx-swap will replace the content of the container, so the title should be outside.
+		<ul class="space-y-2">
+			{props.statusHistory.map((entry, index) => (
+				<li key={index} class="flex items-start p-2 bg-gray-50 rounded-md">
+					<svg
+						class="h-4 w-4 text-gray-500 mr-3 flex-shrink-0 mt-1"
+						fill="currentColor"
+						viewBox="0 0 20 20"
+						aria-hidden="true"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+							clip-rule="evenodd"
+						></path>
+					</svg>
+					<span class="text-sm text-gray-800">
+						{entry.status_text}
+						<span class="block text-xs text-gray-500 mt-0.5">
+							{new Date(entry.timestamp).toLocaleString()}
+						</span>
+					</span>
+				</li>
+			))}
+		</ul>
+	);
+};
+
 export const Layout: FC = (props) => {
 	return (
 		<html lang="en">
@@ -389,10 +424,34 @@ export const ResearchDetails: FC = (props) => {
 				<p className="text-sm text-gray-500">
 					Generated on {props.research.created_at}
 				</p>
+				<div class="mt-2">
+					<ResearchStatus status={props.research.status} />
+				</div>
 			</div>
 
+			{props.research.status === 1 && (
+				<div
+					id="research-status-history-container"
+					class="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
+					hx-get={`/research/${props.research.id}/status`}
+					hx-trigger="every 5s"
+					hx-swap="innerHTML"
+					hx-indicator="#status-update-indicator"
+				>
+					<h3 class="text-lg font-semibold text-gray-800 mb-3">Live Status Updates</h3>
+					<p class="text-sm text-gray-600">Loading initial status...</p>
+				</div>
+				<div id="status-update-indicator" class="htmx-indicator my-2 flex items-center justify-start text-sm text-gray-500">
+					<svg class="animate-spin h-4 w-4 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+					</svg>
+					<span>Fetching latest status...</span>
+				</div>
+			)}
+
 			<div className="mb-8">
-				<details className="group">
+				<details className="group" open>
 					<summary className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
 						<svg
 							className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90"

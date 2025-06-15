@@ -6,6 +6,7 @@ import {
 import { generateObject, generateText } from "ai";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
+import { crypto } from "node:crypto"; // Or use global crypto if available
 import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
@@ -35,8 +36,15 @@ async function deepResearch({
 	depth: number;
 	learnings: string[]; // Keep this as string[]
 	visitedUrls: string[];
+	qb: D1QB;
+	researchId: string;
 }) {
-	const serpQueries = await step.do("get serp queries", () =>
+	await addResearchStatusHistoryEntry(
+		qb,
+		researchId,
+		`Generating SERP queries for research goal: ${query}`,
+	);
+	const serpQueries = await step.do("generate_serp_queries", () =>
 		generateSerpQueries({
 			env,
 			query,
@@ -49,15 +57,31 @@ async function deepResearch({
 	let allUrls = [...visitedUrls];
 
 	for (const serpQuery of serpQueries) {
-		const result = await step.do("get new learnings", async () => {
+		await addResearchStatusHistoryEntry(
+			qb,
+			researchId,
+			`Executing search for query: ${serpQuery.query}`,
+		);
+		const result = await step.do("perform_web_search", async () => {
 			try {
 				return await webSearch(
 					await browser.getActiveBrowser(),
 					serpQuery.query,
 					5,
+					async (urlToLog: string) =>
+						await addResearchStatusHistoryEntry(
+							qb,
+							researchId,
+							`Crawling URL: ${urlToLog}`,
+						),
 				);
-			} catch (e) {
+			} catch (e: any) {
 				console.error(e);
+				await addResearchStatusHistoryEntry(
+					qb,
+					researchId,
+					`Error during web search for query ${serpQuery.query}: ${e.message}`,
+				);
 				return null;
 			}
 		});
@@ -66,13 +90,18 @@ async function deepResearch({
 			// web search provably failed, no learnings to get
 			continue;
 		}
+		await addResearchStatusHistoryEntry(
+			qb,
+			researchId,
+			`Processing results for SERP query: ${serpQuery.query}`,
+		);
 
 		const newUrls = result.map((item) => item.url).filter(Boolean);
 		const newBreadth = Math.ceil(breadth / 2);
 		const newDepth = depth - 1;
 
 		const { learnings: newLearnings, followUpQuestions } = await step.do(
-			"get new learnings",
+			"extract_learnings_from_search",
 			async () => {
 				return await processSerpResult({
 					env,
@@ -100,6 +129,8 @@ async function deepResearch({
 				depth: newDepth,
 				learnings: allLearnings,
 				visitedUrls: allUrls,
+				qb,
+				researchId,
 			});
 			allLearnings = [...allLearnings, ...recursiveResult.learnings];
 			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
@@ -290,13 +321,38 @@ export async function writeFinalReport({
 	return text + urlsSection;
 }
 
+async function addResearchStatusHistoryEntry(
+	db: D1QB,
+	researchId: string,
+	statusText: string,
+) {
+	try {
+		await db
+			.insert({
+				tableName: "research_status_history",
+				data: {
+					id: crypto.randomUUID(),
+					research_id: researchId,
+					status_text: statusText,
+					// timestamp is default CURRENT_TIMESTAMP
+				},
+			})
+			.execute();
+	} catch (e) {
+		console.error("Failed to insert research status history entry:", e);
+	}
+}
+
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
+		const qb = new D1QB(this.env.DB);
+		const { query, questions, breadth, depth, id, initialLearnings } =
+			event.payload;
+
 		try {
+			await addResearchStatusHistoryEntry(qb, id, "Workflow run initiated.");
 			console.log("Starting workflow");
 
-			const { query, questions, breadth, depth, id, initialLearnings } =
-				event.payload;
 			const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
 				.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
 				.join("\n")}`;
@@ -318,10 +374,12 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				depth: Number.parseInt(depth),
 				learnings: processedLearnings,
 				visitedUrls: [],
+				qb,
+				researchId: id,
 			});
 
 			console.log("Generating report");
-			const report = await step.do("generate report", () =>
+			const report = await step.do("generate_final_report", () =>
 				writeFinalReport({
 					env: this.env,
 					prompt: fullQuery,
@@ -329,8 +387,12 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 					visitedUrls: researchResult.visitedUrls,
 				}),
 			);
+			await addResearchStatusHistoryEntry(
+				qb,
+				id,
+				"Finalizing report and completing workflow.",
+			);
 
-			const qb = new D1QB(this.env.DB);
 			await qb
 				.update({
 					tableName: "researches",
@@ -350,7 +412,11 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				report,
 			};
 		} catch (error: any) {
-			const qb = new D1QB(this.env.DB);
+			await addResearchStatusHistoryEntry(
+				qb,
+				id,
+				`Workflow failed: ${error.message}`,
+			);
 			await qb
 				.update({
 					tableName: "researches",
@@ -359,7 +425,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 						duration: Date.now() - event.payload.start_ms,
 						result: `Error: ${error.message}\n\n${error.stack ?? ""}`,
 					},
-					where: { conditions: "id = ?", params: [event.payload.id] },
+					where: { conditions: "id = ?", params: [id] },
 				})
 				.execute();
 
