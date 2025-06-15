@@ -256,7 +256,9 @@ app.get("/details/:id", async (c) => {
 	if (resp.results && resp.results.status === 1) {
 		const historyQb = new D1QB(c.env.DB);
 		const historyResult = await historyQb
-			.select<{ status_text: string; timestamp: string }>("research_status_history")
+			.select<{ status_text: string; timestamp: string }>(
+				"research_status_history",
+			)
 			.where("research_id = ?", id)
 			.orderBy("timestamp desc")
 			.limit(5)

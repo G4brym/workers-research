@@ -426,7 +426,7 @@ export const ResearchDetails: FC = (props) => {
 	const statusUpdateIndicatorId = `status-update-indicator-${researchData.id}`;
 
 	let htmxPollingProps = {};
-    if (researchData.status === 1) {
+	if (researchData.status === 1) {
 		htmxPollingProps = {
 			"hx-get": `/details/${researchData.id}?partial=true`,
 			"hx-trigger": "every 5s",
@@ -569,7 +569,7 @@ export const ResearchDetails: FC = (props) => {
 			)}
 
 			{/* Report Content - direct child of main */}
-			{researchData.status === 2 && (
+			{researchData.status !== 1 && (
 				<div className="prose prose-lg max-w-none">
 					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
 						{html(researchData.report_html)}
