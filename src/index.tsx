@@ -417,7 +417,7 @@ app.get("/research/:id/status", async (c) => {
 		)
 		.where("research_id = ?", id)
 		.orderBy("timestamp desc")
-		.limit(10)
+		.limit(5)
 		.all();
 
 	if (!history.results || history.results.length === 0) {

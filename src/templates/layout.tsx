@@ -32,24 +32,27 @@ export const ResearchStatusHistoryDisplay: FC<{
 	return (
 		// Removed mt-8, h3 title, and outer div. The parent container will handle margins.
 		// The hx-swap will replace the content of the container, so the title should be outside.
-		<ul class="space-y-2">
+		<ul class="space-y-3">
 			{props.statusHistory.map((entry, index) => (
-				<li key={index} class="flex items-start p-2 bg-gray-50 rounded-md">
+				<li
+					key={index}
+					class="flex items-start p-3 bg-white rounded-md border border-gray-200 hover:bg-gray-50 transition-colors duration-150"
+				>
 					<svg
-						class="h-4 w-4 text-gray-500 mr-3 flex-shrink-0 mt-1"
+						class="h-5 w-5 text-blue-500 mr-3 flex-shrink-0"
 						fill="currentColor"
 						viewBox="0 0 20 20"
 						aria-hidden="true"
 					>
 						<path
 							fill-rule="evenodd"
-							d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+							d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.25-7.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0z"
 							clip-rule="evenodd"
 						></path>
 					</svg>
-					<span class="text-sm text-gray-800">
+					<span class="text-sm text-gray-700">
 						{entry.status_text}
-						<span class="block text-xs text-gray-500 mt-0.5">
+						<span class="block text-xs text-gray-500 mt-1">
 							{new Date(entry.timestamp).toLocaleString()}
 						</span>
 					</span>
@@ -477,7 +480,7 @@ export const ResearchDetails: FC = (props) => {
 			)}
 
 			<div className="mb-8">
-				<details className="group" open>
+				<details className="group">
 					<summary className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
 						<svg
 							className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90"
