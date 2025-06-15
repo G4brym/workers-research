@@ -87,11 +87,6 @@ graph TD
     C4 -- No --> D["Compile All Learnings & Generate Final Report"];
     D --> E["Store Report & Update Status in Database"];
     E --> F["Research Complete / Report Available"];
-
-    C2 -- Error --> ERR["Handle Error & Update Status"];
-    C3 -- Error --> ERR;
-    D -- Error --> ERR;
-    ERR --> E;
 ```
 
 ## 🚦 Getting Started
