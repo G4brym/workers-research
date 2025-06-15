@@ -77,18 +77,18 @@ The following diagram illustrates the detailed workflow of the research agent wh
 
 ```mermaid
 graph TD
-    A[User Input: Query, Parameters] --> B{System: Prepare Full Query & Setup};
-    B --> C(Start Iterative Research Cycle);
-    C --> C1[Generate Search Tasks/Queries based on current goal & learnings];
-    C1 --> C2[Gather Information (Web Search & Content Extraction)];
-    C2 --> C3[Process Information: Extract Key Learnings & Identify Follow-up Needs];
-    C3 --> C4{Further Research Iterations Needed? (based on depth/breadth)};
+    A["User Input: Query, Parameters"] --> B["System: Prepare Full Query & Setup"];
+    B --> C["Start Iterative Research Cycle"];
+    C --> C1["Generate Search Tasks/Queries based on current goal & learnings"];
+    C1 --> C2["Gather Information (Web Search & Content Extraction)"];
+    C2 --> C3["Process Information: Extract Key Learnings & Identify Follow-up Needs"];
+    C3 --> C4["Further Research Iterations Needed? (based on depth/breadth)"];
     C4 -- Yes --> C1;
-    C4 -- No --> D[Compile All Learnings & Generate Final Report];
-    D --> E(Store Report & Update Status in Database);
-    E --> F[Research Complete / Report Available];
+    C4 -- No --> D["Compile All Learnings & Generate Final Report"];
+    D --> E["Store Report & Update Status in Database"];
+    E --> F["Research Complete / Report Available"];
 
-    C2 -- Error --> ERR[Handle Error & Update Status];
+    C2 -- Error --> ERR["Handle Error & Update Status"];
     C3 -- Error --> ERR;
     D -- Error --> ERR;
     ERR --> E;
