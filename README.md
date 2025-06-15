@@ -77,33 +77,14 @@ The following diagram illustrates the detailed workflow of the research agent wh
 
 ```mermaid
 graph TD
-    A[Start / User Input Capture: Query, Q&A, Breadth, Depth, Initial Learnings] --> B{Combine Initial Query + Q&A};
-    B --> C(Initialize Browser);
-    C --> D(Call deepResearch);
+    A[User Provides Research Query & Parameters] --> B{System Prepares & Initializes Research};
+    B --> C(Iterative Research & Learning Cycle);
+    C --> D[Generate Final Report from Learnings];
+    D --> E(Store Report & Update Status in Database);
+    E --> F[Research Complete / Report Available];
 
-    subgraph deepResearch [deepResearch Function]
-        D1["Generate SERP Queries using LLM \n(based on current query, learnings, breadth)"] --> D2{Loop Through Each SERP Query};
-        D2 -- Yes --> D3[Perform Web Search for SERP Query];
-        D3 -- Results --> D4["Process SERP Results using LLM \n(Extract Learnings, Generate Follow-up Qs)"];
-        D4 --> D5[Store New Learnings & Visited URLs];
-        D5 --> D6{Depth > 0?};
-        D6 -- Yes --> D7[Construct New Query from Follow-ups];
-        D7 --> D8("Recursive Call to deepResearch \n with new query, decremented depth, \n updated breadth, all learnings & URLs");
-        D8 -- Returns Updated Learnings & URLs --> D5;
-        D6 -- No --> D9[End of Loop for this SERP Query];
-        D9 --> D2;
-        D2 -- No (All SERP Queries Processed) --> D10[Return All Accumulated Learnings & Visited URLs];
-    end
-
-    D -- Returns All Learnings & URLs --> E["Generate Final Report using LLM \n (based on Full Initial Query and All Learnings)"];
-    E --> F[Append Visited URLs as Sources];
-    F --> G[Update Database: Status = Complete, Report, Duration];
-    G --> H[End Workflow / Return Report];
-
-    subgraph Error Handling
-        ERR1[Error Occurs at Any Step] --> ERR2[Update Database: Status = Error, Error Message, Duration];
-        ERR2 --> ERR3[End Workflow with Error];
-    end
+    C -- Error --> G[Handle Error & Update Status in Database];
+    D -- Error --> G;
 ```
 
 ## 🚦 Getting Started
