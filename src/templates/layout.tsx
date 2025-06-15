@@ -569,11 +569,13 @@ export const ResearchDetails: FC = (props) => {
 			)}
 
 			{/* Report Content - direct child of main */}
-			<div className="prose prose-lg max-w-none">
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-					{html(researchData.report_html)}
+			{researchData.status === 2 && (
+				<div className="prose prose-lg max-w-none">
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+						{html(researchData.report_html)}
+					</div>
 				</div>
-			</div>
+			)}
 		</main>
 	);
 };
