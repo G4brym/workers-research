@@ -426,7 +426,7 @@ export const ResearchDetails: FC = (props) => {
 	const statusUpdateIndicatorId = `status-update-indicator-${researchData.id}`;
 
 	let htmxPollingProps = {};
-	if (researchData.status === 1 && !researchData.isPartial) {
+    if (researchData.status === 1) {
 		htmxPollingProps = {
 			"hx-get": `/details/${researchData.id}?partial=true`,
 			"hx-trigger": "every 5s",
@@ -569,11 +569,13 @@ export const ResearchDetails: FC = (props) => {
 			)}
 
 			{/* Report Content - direct child of main */}
-			<div className="prose prose-lg max-w-none">
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-					{html(researchData.report_html)}
+			{researchData.status === 2 && (
+				<div className="prose prose-lg max-w-none">
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+						{html(researchData.report_html)}
+					</div>
 				</div>
-			</div>
+			)}
 		</main>
 	);
 };
