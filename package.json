@@ -12,7 +12,8 @@
 	"scripts": {
 		"build": "tsup src/index.ts --format cjs,esm --external cloudflare:workers",
 		"build-css": "npx @tailwindcss/cli -i ./src/templates/styles.css -o ./src/static/styles.css",
-		"lint": "npx @biomejs/biome check src/ || (npx @biomejs/biome check --write src/; exit 1)"
+		"lint": "npx @biomejs/biome check src/ || (npx @biomejs/biome check --write src/; exit 1)",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -34,6 +35,8 @@
 		"@types/node": "^22.15.30",
 		"tailwindcss": "^4.1.8",
 		"typescript": "^5.8.3",
+		"unenv": "^2.0.0-rc.17",
+		"vitest": "^3.2.3",
 		"wrangler": "^4.19.1"
 	},
 	"dependencies": {

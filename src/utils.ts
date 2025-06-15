@@ -28,6 +28,12 @@ export function getModel(env: Env) {
 
 	return google("gemini-2.5-flash-preview-05-20");
 }
+
+export function getFallbackModel(env: Env) {
+	const google = getGoogleProvider(env);
+	return google("gemini-2.0-flash");
+}
+
 export function getModelThinking(env: Env) {
 	const google = getGoogleProvider(env);
 

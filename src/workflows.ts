@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
-import { getModel, getModelThinking } from "./utils";
+import { getModel, getModelThinking, getFallbackModel } from "./utils";
 import {
 	type ResearchBrowser,
 	type SearchResult,
@@ -104,7 +104,7 @@ async function deepResearch({
 	return { learnings: allLearnings, visitedUrls: allUrls };
 }
 
-async function processSerpResult({
+export async function processSerpResult({
 	env,
 	query,
 	result,
@@ -119,26 +119,55 @@ async function processSerpResult({
 }) {
 	const contents = result.map((item) => item.markdown).filter(Boolean);
 
-	const res = await generateObject({
-		model: getModel(env),
-		abortSignal: AbortSignal.timeout(60000),
-		system: RESEARCH_PROMPT(),
-		prompt: `Given the SERP contents for query <query>${query}</query>, extract up to ${numLearnings} concise and unique learnings. Include entities such as people, places, companies, etc., and also provide up to ${numFollowUpQuestions} follow-up questions to extend the research.\n\n<contents>${contents
-			.map((content) => `<content>\n${content}\n</content>`)
-			.join("\n")}</contents>`,
-		schema: z.object({
-			learnings: z
-				.array(z.string())
-				.describe(`List of learnings (max ${numLearnings})`),
-			followUpQuestions: z
-				.array(z.string())
-				.describe(`List of follow-up questions (max ${numFollowUpQuestions})`),
-		}),
+	const model = getModel(env);
+	const schema = z.object({
+		learnings: z
+			.array(z.string())
+			.describe(`List of learnings (max ${numLearnings})`),
+		followUpQuestions: z
+			.array(z.string())
+			.describe(`List of follow-up questions (max ${numFollowUpQuestions})`),
 	});
-	return res.object;
+	const system = RESEARCH_PROMPT();
+	const prompt = `Given the SERP contents for query <query>${query}</query>, extract up to ${numLearnings} concise and unique learnings. Include entities such as people, places, companies, etc., and also provide up to ${numFollowUpQuestions} follow-up questions to extend the research.\n\n<contents>${contents
+		.map((content) => `<content>\n${content}\n</content>`)
+		.join("\n")}</contents>`;
+
+	try {
+		const res = await generateObject({
+			model,
+			abortSignal: AbortSignal.timeout(60000),
+			system,
+			prompt,
+			schema,
+		});
+		return res.object;
+	} catch (error: any) {
+		if (
+			error.name === "AI_RetryError" ||
+			(error.message &&
+				(error.message.includes("quota exceeded") ||
+					error.message.includes("rate limit")))
+		) {
+			console.warn(
+				`Rate limit error in processSerpResult for query "${query}". Retrying with fallback model.`,
+				error,
+			);
+			const fallbackModel = getFallbackModel(env);
+			const res = await generateObject({
+				model: fallbackModel,
+				abortSignal: AbortSignal.timeout(60000),
+				system,
+				prompt,
+				schema,
+			});
+			return res.object;
+		}
+		throw error;
+	}
 }
 
-async function generateSerpQueries({
+export async function generateSerpQueries({
 	env,
 	query,
 	numQueries = 5,
@@ -149,31 +178,59 @@ async function generateSerpQueries({
 	numQueries?: number;
 	learnings?: string[];
 }) {
-	const res = await generateObject({
-		model: getModel(env),
-		system: RESEARCH_PROMPT(),
-		prompt: `Generate up to ${numQueries} unique SERP queries for the following prompt: <prompt>${query}</prompt>${
-			learnings
-				? `\nIncorporate these previous learnings:\n${learnings.join("\n")}`
-				: ""
-		}`,
-		schema: z.object({
-			queries: z
-				.array(
-					z.object({
-						query: z.string().describe("The SERP query"),
-						researchGoal: z
-							.string()
-							.describe("The research goal and directions for this query"),
-					}),
-				)
-				.describe(`List of SERP queries (max ${numQueries})`),
-		}),
+	const model = getModel(env);
+	const system = RESEARCH_PROMPT();
+	const prompt = `Generate up to ${numQueries} unique SERP queries for the following prompt: <prompt>${query}</prompt>${
+		learnings
+			? `\nIncorporate these previous learnings:\n${learnings.join("\n")}`
+			: ""
+	}`;
+	const schema = z.object({
+		queries: z
+			.array(
+				z.object({
+					query: z.string().describe("The SERP query"),
+					researchGoal: z
+						.string()
+						.describe("The research goal and directions for this query"),
+				}),
+			)
+			.describe(`List of SERP queries (max ${numQueries})`),
 	});
-	return res.object.queries.slice(0, numQueries);
+
+	try {
+		const res = await generateObject({
+			model,
+			system,
+			prompt,
+			schema,
+		});
+		return res.object.queries.slice(0, numQueries);
+	} catch (error: any) {
+		if (
+			error.name === "AI_RetryError" ||
+			(error.message &&
+				(error.message.includes("quota exceeded") ||
+					error.message.includes("rate limit")))
+		) {
+			console.warn(
+				`Rate limit error in generateSerpQueries for query "${query}". Retrying with fallback model.`,
+				error,
+			);
+			const fallbackModel = getFallbackModel(env);
+			const res = await generateObject({
+				model: fallbackModel,
+				system,
+				prompt,
+				schema,
+			});
+			return res.object.queries.slice(0, numQueries);
+		}
+		throw error;
+	}
 }
 
-async function writeFinalReport({
+export async function writeFinalReport({
 	env,
 	prompt,
 	learnings,
@@ -188,11 +245,40 @@ async function writeFinalReport({
 		.map((l) => `<learning>\n${l}\n</learning>`)
 		.join("\n");
 
-	const { text } = await generateText({
-		model: getModelThinking(env),
-		system: RESEARCH_PROMPT(),
-		prompt: `Using the prompt <prompt>${prompt}</prompt>, write a detailed final report (3+ pages) that includes all the following learnings:\n\n<learnings>\n${learningsString}\n</learnings>`,
-	});
+	const model = getModelThinking(env);
+	const system = RESEARCH_PROMPT();
+	const generationPrompt = `Using the prompt <prompt>${prompt}</prompt>, write a detailed final report (3+ pages) that includes all the following learnings:\n\n<learnings>\n${learningsString}\n</learnings>`;
+
+	let text: string;
+	try {
+		const res = await generateText({
+			model,
+			system,
+			prompt: generationPrompt,
+		});
+		text = res.text;
+	} catch (error: any) {
+		if (
+			error.name === "AI_RetryError" ||
+			(error.message &&
+				(error.message.includes("quota exceeded") ||
+					error.message.includes("rate limit")))
+		) {
+			console.warn(
+				`Rate limit error in writeFinalReport for prompt "${prompt}". Retrying with fallback model.`,
+				error,
+			);
+			const fallbackModel = getFallbackModel(env);
+			const res = await generateText({
+				model: fallbackModel,
+				system,
+				prompt: generationPrompt,
+			});
+			text = res.text;
+		} else {
+			throw error;
+		}
+	}
 
 	const parsedSources = [];
 	for (const url of visitedUrls) {
