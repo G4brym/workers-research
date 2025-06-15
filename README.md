@@ -46,19 +46,15 @@ Inspired by [dzhng's deep-research](https://github.com/dzhng/deep-research). Tha
 
 ```mermaid
 graph TD
-    A[User Browser] -- HTTPS --> B{Cloudflare Worker};
-    B -- Interaction --> C[Hono JSX Dashboard];
-    B -- API Calls --> D[Cloudflare Workflows];
+    B{Cloudflare Worker} -- API Calls --> D[Cloudflare Workflows];
+    B -- Fetches Status/Data --> F[Cloudflare D1 Database];
     D -- Triggers --> E[Gemini 2.5 API];
-    D -- Stores/Retrieves --> F[Cloudflare D1 Database];
+    D -- Stores/Retrieves Research --> F;
     D -- If Crawling Needed --> G[Browser Rendering API];
-    E -- Report Chunks --> D;
-    F -- Research Data --> B;
-    C -- Displays --> A;
+    E -- Report Chunks/Results --> D;
 
-    subgraph "Cloudflare Ecosystem"
+    subgraph "Cloudflare Ecosystem (Backend)"
         B
-        C
         D
         F
         G
@@ -68,9 +64,7 @@ graph TD
         E
     end
 
-    style A fill:#f9f,stroke:#333,stroke-width:2px;
     style B fill:#ccf,stroke:#333,stroke-width:2px;
-    style C fill:#ccf,stroke:#333,stroke-width:2px;
     style D fill:#ccf,stroke:#333,stroke-width:2px;
     style E fill:#fca,stroke:#333,stroke-width:2px;
     style F fill:#ccf,stroke:#333,stroke-width:2px;
@@ -88,20 +82,20 @@ graph TD
     C --> D(Call deepResearch);
 
     subgraph deepResearch [deepResearch Function]
-        D1[Generate SERP Queries using LLM <br/>(based on current query, learnings, breadth)] --> D2{Loop Through Each SERP Query};
+        D1["Generate SERP Queries using LLM \n(based on current query, learnings, breadth)"] --> D2{Loop Through Each SERP Query};
         D2 -- Yes --> D3[Perform Web Search for SERP Query];
-        D3 -- Results --> D4[Process SERP Results using LLM <br/>(Extract Learnings, Generate Follow-up Qs)];
+        D3 -- Results --> D4["Process SERP Results using LLM \n(Extract Learnings, Generate Follow-up Qs)"];
         D4 --> D5[Store New Learnings & Visited URLs];
         D5 --> D6{Depth > 0?};
         D6 -- Yes --> D7[Construct New Query from Follow-ups];
-        D7 --> D8(Recursive Call to deepResearch <br/> with new query, decremented depth, <br/> updated breadth, all learnings & URLs);
+        D7 --> D8("Recursive Call to deepResearch \n with new query, decremented depth, \n updated breadth, all learnings & URLs");
         D8 -- Returns Updated Learnings & URLs --> D5;
         D6 -- No --> D9[End of Loop for this SERP Query];
         D9 --> D2;
         D2 -- No (All SERP Queries Processed) --> D10[Return All Accumulated Learnings & Visited URLs];
     end
 
-    D -- Returns All Learnings & URLs --> E[Generate Final Report using LLM <br/> (based on Full Initial Query and All Learnings)];
+    D -- Returns All Learnings & URLs --> E["Generate Final Report using LLM \n (based on Full Initial Query and All Learnings)"];
     E --> F[Append Visited URLs as Sources];
     F --> G[Update Database: Status = Complete, Report, Duration];
     G --> H[End Workflow / Return Report];
