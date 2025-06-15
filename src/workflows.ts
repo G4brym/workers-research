@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
-import { getModel, getModelThinking, getFallbackModel } from "./utils";
+import { getFallbackModel, getModel, getModelThinking } from "./utils";
 import {
 	type ResearchBrowser,
 	type SearchResult,
@@ -37,7 +37,12 @@ async function deepResearch({
 	visitedUrls: string[];
 }) {
 	const serpQueries = await step.do("get serp queries", () =>
-		generateSerpQueries({ env, query, learnings: initialLearningsParam, numQueries: breadth }),
+		generateSerpQueries({
+			env,
+			query,
+			learnings: initialLearningsParam,
+			numQueries: breadth,
+		}),
 	);
 
 	let allLearnings = [...initialLearningsParam]; // Use the passed learnings
@@ -144,10 +149,8 @@ export async function processSerpResult({
 		return res.object;
 	} catch (error: any) {
 		if (
-			error.name === "AI_RetryError" ||
-			(error.message &&
-				(error.message.includes("quota exceeded") ||
-					error.message.includes("rate limit")))
+			error.message &&
+			error.message.includes("exceeded your current quota")
 		) {
 			console.warn(
 				`Rate limit error in processSerpResult for query "${query}". Retrying with fallback model.`,
@@ -208,10 +211,8 @@ export async function generateSerpQueries({
 		return res.object.queries.slice(0, numQueries);
 	} catch (error: any) {
 		if (
-			error.name === "AI_RetryError" ||
-			(error.message &&
-				(error.message.includes("quota exceeded") ||
-					error.message.includes("rate limit")))
+			error.message &&
+			error.message.includes("exceeded your current quota")
 		) {
 			console.warn(
 				`Rate limit error in generateSerpQueries for query "${query}". Retrying with fallback model.`,
@@ -259,10 +260,8 @@ export async function writeFinalReport({
 		text = res.text;
 	} catch (error: any) {
 		if (
-			error.name === "AI_RetryError" ||
-			(error.message &&
-				(error.message.includes("quota exceeded") ||
-					error.message.includes("rate limit")))
+			error.message &&
+			error.message.includes("exceeded your current quota")
 		) {
 			console.warn(
 				`Rate limit error in writeFinalReport for prompt "${prompt}". Retrying with fallback model.`,
@@ -296,12 +295,16 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 		try {
 			console.log("Starting workflow");
 
-			const { query, questions, breadth, depth, id, initialLearnings } = event.payload;
+			const { query, questions, breadth, depth, id, initialLearnings } =
+				event.payload;
 			const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
 				.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
 				.join("\n")}`;
 
-			const processedLearnings = initialLearnings && initialLearnings.trim().length > 0 ? initialLearnings.split("\n") : [];
+			const processedLearnings =
+				initialLearnings && initialLearnings.trim().length > 0
+					? initialLearnings.split("\n")
+					: [];
 
 			const browser = await getBrowser(this.env);
 
