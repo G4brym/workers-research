@@ -6,7 +6,6 @@ import {
 import { generateObject, generateText } from "ai";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
-import { crypto } from "node:crypto"; // Or use global crypto if available
 import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import type { ResearchType } from "./types";
@@ -27,6 +26,8 @@ async function deepResearch({
 	depth,
 	learnings: initialLearningsParam, // Renamed to avoid conflict
 	visitedUrls,
+	qb,
+	researchId,
 }: {
 	step: WorkflowStep;
 	env: Env;
@@ -179,10 +180,7 @@ export async function processSerpResult({
 		});
 		return res.object;
 	} catch (error: any) {
-		if (
-			error.message &&
-			error.message.includes("exceeded your current quota")
-		) {
+		if (error.message?.includes("exceeded your current quota")) {
 			console.warn(
 				`Rate limit error in processSerpResult for query "${query}". Retrying with fallback model.`,
 				error,
@@ -241,10 +239,7 @@ export async function generateSerpQueries({
 		});
 		return res.object.queries.slice(0, numQueries);
 	} catch (error: any) {
-		if (
-			error.message &&
-			error.message.includes("exceeded your current quota")
-		) {
+		if (error.message?.includes("exceeded your current quota")) {
 			console.warn(
 				`Rate limit error in generateSerpQueries for query "${query}". Retrying with fallback model.`,
 				error,
@@ -290,10 +285,7 @@ export async function writeFinalReport({
 		});
 		text = res.text;
 	} catch (error: any) {
-		if (
-			error.message &&
-			error.message.includes("exceeded your current quota")
-		) {
+		if (error.message?.includes("exceeded your current quota")) {
 			console.warn(
 				`Rate limit error in writeFinalReport for prompt "${prompt}". Retrying with fallback model.`,
 				error,

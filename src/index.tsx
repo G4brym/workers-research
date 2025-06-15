@@ -14,8 +14,8 @@ import {
 	NewResearchQuestions,
 	ResearchDetails,
 	ResearchList,
-	TopBar,
 	ResearchStatusHistoryDisplay,
+	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import { formatDuration, getModel } from "./utils";
@@ -431,5 +431,7 @@ app.get("/research/:id/status", async (c) => {
 		}
 	}
 
-	return c.html(<ResearchStatusHistoryDisplay statusHistory={history.results} />);
+	return c.html(
+		<ResearchStatusHistoryDisplay statusHistory={history.results} />,
+	);
 });

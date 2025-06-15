@@ -1,5 +1,5 @@
 // src/__mocks__/cloudflare_workers.ts
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 // Mock the necessary exports from 'cloudflare:workers'
 // For the current tests, we likely don't need complex implementations.
@@ -7,19 +7,19 @@ import { vi } from 'vitest';
 // that workflows.ts expects when it imports.
 
 export class WorkflowEntrypoint {
-  // Mock implementation or leave empty if not directly used in a way that affects tests
+	// Mock implementation or leave empty if not directly used in a way that affects tests
 }
 
 // Add other exports if workflows.ts or its dependencies use them
 // For example, if 'step' objects or other types/functions are used:
 export const step = {
-  do: vi.fn(async (name, fn) => {
-    if (fn) {
-      return fn();
-    }
-    return Promise.resolve();
-  }),
-  // Add other step properties/methods if necessary
+	do: vi.fn(async (name, fn) => {
+		if (fn) {
+			return fn();
+		}
+		return Promise.resolve();
+	}),
+	// Add other step properties/methods if necessary
 };
 
 // Mock any other specific named exports from 'cloudflare:workers' that your code might be using.

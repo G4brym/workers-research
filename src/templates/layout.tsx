@@ -22,7 +22,9 @@ export const TopBar: FC = (props) => {
 	);
 };
 
-export const ResearchStatusHistoryDisplay: FC<{ statusHistory: { status_text: string, timestamp: string }[] }> = (props) => {
+export const ResearchStatusHistoryDisplay: FC<{
+	statusHistory: { status_text: string; timestamp: string }[];
+}> = (props) => {
 	if (!props.statusHistory || props.statusHistory.length === 0) {
 		return <p class="text-sm text-gray-600">No status updates yet.</p>;
 	}
@@ -266,7 +268,8 @@ export const ResearchList: FC<ResearchListProps> = (props) => {
 		);
 	}
 
-	const currentPath = props.page && props.page > 1 ? `/?page=${props.page}` : "/";
+	const currentPath =
+		props.page && props.page > 1 ? `/?page=${props.page}` : "/";
 	const hxGetUrlWithPartial = currentPath.includes("?")
 		? `${currentPath}&partial=true`
 		: `${currentPath}?partial=true`;
@@ -430,23 +433,46 @@ export const ResearchDetails: FC = (props) => {
 			</div>
 
 			{props.research.status === 1 && (
-				<div
-					id="research-status-history-container"
-					class="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
-					hx-get={`/research/${props.research.id}/status`}
-					hx-trigger="every 5s"
-					hx-swap="innerHTML"
-					hx-indicator="#status-update-indicator"
-				>
-					<h3 class="text-lg font-semibold text-gray-800 mb-3">Live Status Updates</h3>
-					<p class="text-sm text-gray-600">Loading initial status...</p>
-				</div>
-				<div id="status-update-indicator" class="htmx-indicator my-2 flex items-center justify-start text-sm text-gray-500">
-					<svg class="animate-spin h-4 w-4 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-					</svg>
-					<span>Fetching latest status...</span>
+				<div>
+					<div
+						id="research-status-history-container"
+						class="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
+						hx-get={`/research/${props.research.id}/status`}
+						hx-trigger="every 5s"
+						hx-swap="innerHTML"
+						hx-indicator="#status-update-indicator"
+					>
+						<h3 class="text-lg font-semibold text-gray-800 mb-3">
+							Live Status Updates
+						</h3>
+						<p class="text-sm text-gray-600">Loading initial status...</p>
+					</div>
+					<div
+						id="status-update-indicator"
+						class="htmx-indicator my-2 flex items-center justify-start text-sm text-gray-500"
+					>
+						<svg
+							class="animate-spin h-4 w-4 text-blue-600 mr-2"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path>
+						</svg>
+						<span>Fetching latest status...</span>
+					</div>
 				</div>
 			)}
 
@@ -482,18 +508,23 @@ export const ResearchDetails: FC = (props) => {
 							</div>
 						</div>
 
-						{props.research.initialLearnings && props.research.initialLearnings.trim() !== "" && (
-							<div>
-								<h4 className="font-semibold text-gray-900 mb-2">
-									Initial Learnings
-								</h4>
-								<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
-									{props.research.initialLearnings.split('\n').map((line: string, index: number) => (
-										<p key={index} className="text-gray-800">{line}</p>
-									))}
+						{props.research.initialLearnings &&
+							props.research.initialLearnings.trim() !== "" && (
+								<div>
+									<h4 className="font-semibold text-gray-900 mb-2">
+										Initial Learnings
+									</h4>
+									<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
+										{props.research.initialLearnings
+											.split("\n")
+											.map((line: string, index: number) => (
+												<p key={index} className="text-gray-800">
+													{line}
+												</p>
+											))}
+									</div>
 								</div>
-							</div>
-						)}
+							)}
 
 						<div>
 							<h4 className="font-semibold text-gray-900 mb-3">
@@ -577,7 +608,8 @@ export const CreateResearch: FC = () => {
 							placeholder="Enter any initial data or learnings you have, one per line..."
 						></textarea>
 						<p className="mt-2 text-sm text-gray-500">
-							Providing initial learnings can help the AI generate more relevant and insightful questions.
+							Providing initial learnings can help the AI generate more relevant
+							and insightful questions.
 						</p>
 					</div>
 					<div className="flex">
@@ -665,7 +697,11 @@ export const CreateResearch: FC = () => {
 				<input type="hidden" name="query" id="original-query-hidden" />
 				<input type="hidden" name="depth" id="depth-hidden" />
 				<input type="hidden" name="breadth" id="breadth-hidden" />
-				<input type="hidden" name="initial-learnings" id="initial-learnings-hidden" />
+				<input
+					type="hidden"
+					name="initial-learnings"
+					id="initial-learnings-hidden"
+				/>
 			</form>
 		</main>
 	);

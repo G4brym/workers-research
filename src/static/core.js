@@ -39,7 +39,8 @@ function loadNewResearch() {
 		const originalBreadth = document.getElementById("initial-breadth").value;
 		document.getElementById("breadth-hidden").value = originalBreadth;
 		const initialLearnings = document.getElementById("initial-learnings").value;
-		document.getElementById("initial-learnings-hidden").value = initialLearnings;
+		document.getElementById("initial-learnings-hidden").value =
+			initialLearnings;
 
 		// Add event listener to start research button when it's created
 		setTimeout(() => {
