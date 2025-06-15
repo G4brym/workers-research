@@ -232,13 +232,18 @@ export const ResearchList: FC<ResearchListProps> = (props) => {
 	}
 
 	const currentPath = props.page && props.page > 1 ? `/?page=${props.page}` : "/";
+	const hxGetUrlWithPartial = currentPath.includes("?")
+		? `${currentPath}&partial=true`
+		: `${currentPath}?partial=true`;
 
 	return (
 		<main
+			id="research-list-container"
 			className="max-w-6xl mx-auto px-4 py-8"
-			hx-get={currentPath}
+			hx-get={hxGetUrlWithPartial}
 			hx-trigger="every 10s"
 			hx-swap="outerHTML"
+			hx-target="#research-list-container"
 		>
 			<div className="mb-8">
 				<h2 className="text-2xl font-bold text-gray-900 mb-2">

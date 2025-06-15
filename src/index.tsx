@@ -47,7 +47,7 @@ app.onError((err, c) => {
 
 app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
-	const { page = "1" } = c.req.query();
+	const { page = "1", partial } = c.req.query();
 	const pageSize = 5; // Items per page
 	const offset = (Number.parseInt(page) - 1) * pageSize;
 
@@ -77,6 +77,21 @@ app.get("/", async (c) => {
 			.one()
 	).results.avg;
 
+	const researchListProps = {
+		researches: {
+			results: researches.results,
+			totalCount: totalCount,
+		},
+		page: Number.parseInt(page),
+		totalCompleted: totalCompleted,
+		totalProcessing: totalProcessing,
+		avgDuration: avgDuration ? formatDuration(avgDuration) : "--",
+	};
+
+	if (partial === "true") {
+		return c.html(<ResearchList {...researchListProps} />);
+	}
+
 	return c.html(
 		<Layout>
 			<TopBar>
@@ -87,16 +102,7 @@ app.get("/", async (c) => {
 					+ New Research
 				</a>
 			</TopBar>
-			<ResearchList
-				researches={{
-					results: researches.results,
-					totalCount: totalCount,
-				}}
-				page={Number.parseInt(page)}
-				totalCompleted={totalCompleted}
-				totalProcessing={totalProcessing}
-				avgDuration={avgDuration ? formatDuration(avgDuration) : "--"}
-			/>
+			<ResearchList {...researchListProps} />
 		</Layout>,
 	);
 });
