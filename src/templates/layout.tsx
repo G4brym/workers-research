@@ -421,140 +421,165 @@ export const ResearchList: FC<ResearchListProps> = (props) => {
 };
 
 export const ResearchDetails: FC = (props) => {
+	const researchData = props.research;
+	const contentWrapperId = `research-details-content-${researchData.id}`;
+	const statusUpdateIndicatorId = `status-update-indicator-${researchData.id}`;
+
+	let htmxProps = {};
+	if (researchData.status === 1 && !researchData.isPartial) {
+		htmxProps = {
+			"hx-get": `/details/${researchData.id}?partial=true`,
+			"hx-trigger": "every 5s",
+			"hx-target": `#${contentWrapperId}`,
+			"hx-swap": "innerHTML",
+			"hx-indicator": `#${statusUpdateIndicatorId}`,
+		};
+	}
+
 	return (
 		<main className="max-w-4xl mx-auto px-4 py-8">
+			{/* Static Top Part */}
 			<div className="mb-8">
 				<h2 className="text-3xl font-bold text-gray-900 mb-2">
-					{props.research.title}
+					{researchData.title}
 				</h2>
 				<p className="text-sm text-gray-500">
-					Generated on {props.research.created_at}
+					Generated on {researchData.created_at}
 				</p>
-				<div class="mt-2">
-					<ResearchStatus status={props.research.status} />
+				<div className="mt-2">
+					<ResearchStatus status={researchData.status} />
 				</div>
 			</div>
 
-			{props.research.status === 1 && (
-				<div>
-					<div
-						id="research-status-history-container"
-						class="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200"
-						hx-get={`/research/${props.research.id}/status`}
-						hx-trigger="every 5s"
-						hx-swap="innerHTML"
-						hx-indicator="#status-update-indicator"
-					>
-						<h3 class="text-lg font-semibold text-gray-800 mb-3">
+			{/* Polling Content Wrapper */}
+			<div id={contentWrapperId} {...htmxProps}>
+				{/* Research Context Section */}
+				<div className="mb-8">
+					<details className="group">
+						<summary className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
+							<svg
+								className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								></path>
+							</svg>
+							<span className="font-medium text-gray-700">
+								Research Context
+							</span>
+							<span className="text-sm text-gray-500 ml-auto">
+								Initial query & follow-up questions
+							</span>
+						</summary>
+
+						<div className="mt-4 space-y-6 px-4 pb-4">
+							<div>
+								<h4 className="font-semibold text-gray-900 mb-2">
+									Initial Query
+								</h4>
+								<div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
+									<p className="text-gray-800">{researchData.query}</p>
+								</div>
+							</div>
+
+							{researchData.initialLearnings &&
+								researchData.initialLearnings.trim() !== "" && (
+									<div>
+										<h4 className="font-semibold text-gray-900 mb-2">
+											Initial Learnings
+										</h4>
+										<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
+											{researchData.initialLearnings
+												.split("\n")
+												.map((line: string, index: number) => (
+													<p key={index} className="text-gray-800">
+														{line}
+													</p>
+												))}
+										</div>
+									</div>
+								)}
+
+							<div>
+								<h4 className="font-semibold text-gray-900 mb-3">
+									Follow-up Questions & Answers
+								</h4>
+								<div className="space-y-4">
+									{researchData.questions.map((obj: any) => (
+										<div
+											key={obj.question} // Assuming question is unique enough for a key
+											className="border border-gray-200 rounded-lg p-4"
+										>
+											<p className="font-medium text-gray-900 mb-2">
+												Q: {obj.question}
+											</p>
+											<p className="text-gray-700 bg-gray-50 p-3 rounded">
+												A: {obj.answer}
+											</p>
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+					</details>
+				</div>
+
+				{/* Live Status Updates Section */}
+				{researchData.status === 1 && (
+					<div className="mb-8">
+						{" "}
+						{/* Outer margin for the status block */}
+						<h3 className="text-lg font-semibold text-gray-800 mb-3">
 							Live Status Updates
 						</h3>
-						<p class="text-sm text-gray-600">Loading initial status...</p>
-					</div>
-					<div
-						id="status-update-indicator"
-						class="htmx-indicator my-2 flex items-center justify-start text-sm text-gray-500"
-					>
-						<svg
-							class="animate-spin h-4 w-4 text-blue-600 mr-2"
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
+						{/* Directly render ResearchStatusHistoryDisplay */}
+						<ResearchStatusHistoryDisplay
+							statusHistory={researchData.statusHistory}
+						/>
+						{/* Relocated and ID-updated htmx-indicator */}
+						<div
+							id={statusUpdateIndicatorId} // Use unique ID
+							className="htmx-indicator my-2 flex items-center justify-start text-sm text-gray-500"
 						>
-							<circle
-								class="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								stroke-width="4"
-							></circle>
-							<path
-								class="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-							></path>
-						</svg>
-						<span>Fetching latest status...</span>
-					</div>
-				</div>
-			)}
-
-			<div className="mb-8">
-				<details className="group">
-					<summary className="flex items-center gap-2 px-4 py-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-						<svg
-							className="w-4 h-4 text-gray-600 transition-transform group-open:rotate-90"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 5l7 7-7 7"
-							></path>
-						</svg>
-						<span className="font-medium text-gray-700">Research Context</span>
-						<span className="text-sm text-gray-500 ml-auto">
-							Initial query & follow-up questions
-						</span>
-					</summary>
-
-					<div className="mt-4 space-y-6 px-4 pb-4">
-						<div>
-							<h4 className="font-semibold text-gray-900 mb-2">
-								Initial Query
-							</h4>
-							<div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
-								<p className="text-gray-800">{props.research.query}</p>
-							</div>
-						</div>
-
-						{props.research.initialLearnings &&
-							props.research.initialLearnings.trim() !== "" && (
-								<div>
-									<h4 className="font-semibold text-gray-900 mb-2">
-										Initial Learnings
-									</h4>
-									<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md">
-										{props.research.initialLearnings
-											.split("\n")
-											.map((line: string, index: number) => (
-												<p key={index} className="text-gray-800">
-													{line}
-												</p>
-											))}
-									</div>
-								</div>
-							)}
-
-						<div>
-							<h4 className="font-semibold text-gray-900 mb-3">
-								Follow-up Questions & Answers
-							</h4>
-							<div className="space-y-4">
-								{props.research.questions.map((obj) => (
-									<div className="border border-gray-200 rounded-lg p-4">
-										<p className="font-medium text-gray-900 mb-2">
-											Q: {obj.question}
-										</p>
-										<p className="text-gray-700 bg-gray-50 p-3 rounded">
-											A: {obj.answer}
-										</p>
-									</div>
-								))}
-							</div>
+							<svg
+								className="animate-spin h-4 w-4 text-blue-600 mr-2"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									className="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									className="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
+							</svg>
+							<span>Fetching latest status...</span>
 						</div>
 					</div>
-				</details>
-			</div>
+				)}
 
-			<div className="prose prose-lg max-w-none">
-				<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-					{html(props.research.report_html)}
+				{/* Report Content */}
+				<div className="prose prose-lg max-w-none">
+					<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+						{html(researchData.report_html)}
+					</div>
 				</div>
 			</div>
+			{/* End of polling content wrapper */}
 		</main>
 	);
 };
