@@ -318,6 +318,15 @@ async function addResearchStatusHistoryEntry(
 	researchId: string,
 	statusText: string,
 ) {
+	const messagesToFilter = [
+		"Generating SERP queries for research",
+		"processing serp results",
+	];
+
+	if (messagesToFilter.some(msg => statusText.includes(msg))) {
+		return;
+	}
+
 	try {
 		await db
 			.insert({
