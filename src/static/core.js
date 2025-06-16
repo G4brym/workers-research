@@ -206,3 +206,10 @@ function deleteItem(id) {
 		form.submit();
 	}
 }
+
+function toggleDropdown(id) {
+  const dropdownElement = document.getElementById(`download-dropdown-${id}`);
+  if (dropdownElement) {
+    dropdownElement.classList.toggle('hidden');
+  }
+}
