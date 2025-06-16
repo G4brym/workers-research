@@ -349,7 +349,11 @@ app.get("/details/:id/download/pdf", async (c) => {
 	}
 
 	const content = resp.results.result ?? "";
-	const htmlContent = renderMarkdownReportContent(content);
+	let htmlContent = renderMarkdownReportContent(content);
+
+	// Prepend CSS styles
+	const cssContent = `@import "tailwindcss";`;
+	htmlContent = `<style>${cssContent}</style>${htmlContent}`;
 
     const browser = await puppeteer.launch(c.env.BROWSER);
     const page = await browser.newPage();
