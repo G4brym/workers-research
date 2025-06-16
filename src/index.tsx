@@ -4,7 +4,6 @@ import { HTTPException } from "hono/http-exception";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
-import { generatePdf } from "html-to-pdf";
 import { renderMarkdownReportContent } from "./markdown";
 import { migrations } from "./migrations";
 import { FOLLOWUP_QUESTIONS_PROMPT, SUMMARIZE_PROMPT } from "./prompts";
@@ -20,6 +19,7 @@ import {
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import { formatDuration, getModel } from "./utils";
+import puppeteer from "@cloudflare/puppeteer";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -47,6 +47,7 @@ app.onError((err, c) => {
 			<h2>{err.name}</h2>
 			<p>{err.message}</p>
 		</ErrorPage>,
+		// @ts-ignore
 		statusCode,
 	);
 });
@@ -349,11 +350,22 @@ app.get("/details/:id/download/pdf", async (c) => {
 
 	const content = resp.results.result ?? "";
 	const htmlContent = renderMarkdownReportContent(content);
-	const pdfBuffer = await generatePdf(htmlContent);
+
+    const browser = await puppeteer.launch(c.env.BROWSER);
+    const page = await browser.newPage();
+
+    // // Step 2: Send HTML and CSS to our browser
+    await page.setContent(htmlContent);
+
+    // // Step 3: Generate and return PDF
+    const pdf = await page.pdf({ printBackground: true });
+
+    // Close browser since we no longer need it
+    await browser.close();
 
 	c.header("Content-Type", "application/pdf");
 	c.header("Content-Disposition", 'attachment; filename="report.pdf"');
-	return c.body(pdfBuffer);
+	return c.body(pdf);
 });
 
 app.get("/details/:id/download/markdown", async (c) => {
