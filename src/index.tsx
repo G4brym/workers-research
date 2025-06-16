@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
+import { generatePdf } from "html-to-pdf";
 import { renderMarkdownReportContent } from "./markdown";
 import { migrations } from "./migrations";
 import { FOLLOWUP_QUESTIONS_PROMPT, SUMMARIZE_PROMPT } from "./prompts";
@@ -37,12 +38,16 @@ app.use(async (c, next) => {
 
 app.onError((err, c) => {
 	console.error(`${err}`);
+	let statusCode = 500;
+	if (err instanceof HTTPException) {
+		statusCode = err.status;
+	}
 	return c.html(
 		<ErrorPage>
 			<h2>{err.name}</h2>
 			<p>{err.message}</p>
 		</ErrorPage>,
-		500,
+		statusCode,
 	);
 });
 
@@ -302,18 +307,53 @@ app.get("/details/:id", async (c) => {
 					>
 						Delete
 					</button>
-					<a
-						href={`/details/${id}/download/markdown`}
-						download="report.md"
-						className="px-3 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100"
-					>
-						Download Report
-					</a>
+					<div className="relative inline-block text-left">
+						<div>
+							<button type="button" className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="options-menu" aria-haspopup="true" aria-expanded="true" onClick="this.nextElementSibling.classList.toggle('hidden')">
+								Download Report
+								<svg className="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+									<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+								</svg>
+							</button>
+						</div>
+						<div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden z-10" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+							<div className="py-1" role="none">
+								<a href={`/details/${id}/download/pdf`} download="report.pdf" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">Download as PDF</a>
+								<a href={`/details/${id}/download/markdown`} download="report.md" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900" role="menuitem">Download as Markdown</a>
+							</div>
+						</div>
+					</div>
 				</div>
 			</TopBar>
 			<ResearchDetails research={researchProps} />
 		</Layout>,
 	);
+});
+
+app.get("/details/:id/download/pdf", async (c) => {
+	const id = c.req.param("id");
+	const qb = new D1QB(c.env.DB);
+	const resp = await qb
+		.fetchOne<ResearchTypeDB>({
+			tableName: "researches",
+			where: {
+				conditions: ["id = ?"],
+				params: [id],
+			},
+		})
+		.execute();
+
+	if (!resp.results) {
+		throw new HTTPException(404, { message: "Research not found" });
+	}
+
+	const content = resp.results.result ?? "";
+	const htmlContent = renderMarkdownReportContent(content);
+	const pdfBuffer = await generatePdf(htmlContent);
+
+	c.header("Content-Type", "application/pdf");
+	c.header("Content-Disposition", 'attachment; filename="report.pdf"');
+	return c.body(pdfBuffer);
 });
 
 app.get("/details/:id/download/markdown", async (c) => {
@@ -335,9 +375,11 @@ app.get("/details/:id/download/markdown", async (c) => {
 
 	const content = resp.results.result ?? "";
 
-	c.header("Content-Type", "text/markdown; charset=utf-8");
-	c.header("Content-Disposition", 'attachment; filename="report.md"');
-	return c.text(content);
+	const headers = new Headers();
+	headers.set("Content-Type", "text/markdown; charset=utf-8");
+	headers.set("Content-Disposition", 'attachment; filename="report.md"');
+
+	return new Response(content, { headers });
 });
 
 app.post("/re-run", async (c) => {
