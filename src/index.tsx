@@ -275,14 +275,19 @@ app.get("/details/:id", async (c) => {
 	let statusHistory: any[] = [];
 	if (resp.results && (resp.results.status === 1 || resp.results.status === 2 || resp.results.status === 3)) {
 		const historyQb = new D1QB(c.env.DB);
-		const historyResult = await historyQb
+		const queryBuilder = historyQb
 			.select<{ status_text: string; timestamp: string }>(
 				"research_status_history",
 			)
 			.where("research_id = ?", id)
-			.orderBy("timestamp desc")
-			.limit(5)
-			.all();
+			.orderBy("timestamp desc");
+
+		// Conditionally apply limit only for status 1 (in progress)
+		if (resp.results.status === 1) {
+			queryBuilder.limit(5);
+		}
+
+		const historyResult = await queryBuilder.all();
 		statusHistory = historyResult.results || [];
 	}
 

@@ -24,41 +24,67 @@ export const TopBar: FC = (props) => {
 
 export const ResearchStatusHistoryDisplay: FC<{
 	statusHistory: { status_text: string; timestamp: string }[];
+	statusHistory: { status_text: string; timestamp: string }[];
+	isLiveView?: boolean;
 }> = (props) => {
-	if (!props.statusHistory || props.statusHistory.length === 0) {
-		return <p class="text-sm text-gray-600">No status updates yet.</p>;
+	const { statusHistory, isLiveView = false } = props; // Default isLiveView to false
+	const title = isLiveView ? "Live Status Updates" : "Research History Log";
+
+	if (!statusHistory || statusHistory.length === 0) {
+		return <p class={`text-gray-500 ${isLiveView ? 'text-sm' : 'text-xs'}`}>No status updates yet.</p>;
 	}
 
-	return (
-		// Removed mt-8, h3 title, and outer div. The parent container will handle margins.
-		// The hx-swap will replace the content of the container, so the title should be outside.
-		<ul class="space-y-3">
-			{props.statusHistory.map((entry, index) => (
-				<li
-					key={index}
-					class="flex items-start p-3 bg-white rounded-md border border-gray-200 hover:bg-gray-50 transition-colors duration-150"
-				>
-					<svg
-						class="h-5 w-5 text-blue-500 mr-3 flex-shrink-0"
-						fill="currentColor"
-						viewBox="0 0 20 20"
-						aria-hidden="true"
+	// For non-live view, use a more compact rendering.
+	// The existing live view (isLiveView = true path) should retain its original styling structure
+	// but it's being moved into this conditional rendering.
+	if (isLiveView) {
+		return (
+			<ul class="space-y-3">
+				{statusHistory.map((entry, index) => (
+					<li
+						key={index}
+						class="flex items-start p-3 bg-white rounded-md border border-gray-200 hover:bg-gray-50 transition-colors duration-150"
 					>
-						<path
-							fill-rule="evenodd"
-							d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.25-7.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0z"
-							clip-rule="evenodd"
-						></path>
-					</svg>
-					<span class="text-sm text-gray-700">
-						{entry.status_text}
-						<span class="block text-xs text-gray-500 mt-1">
-							{new Date(entry.timestamp).toLocaleString()}
+						<svg
+							class="h-5 w-5 text-blue-500 mr-3 flex-shrink-0"
+							fill="currentColor"
+							viewBox="0 0 20 20"
+							aria-hidden="true"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.25-7.25a1.25 1.25 0 112.5 0 1.25 1.25 0 01-2.5 0z"
+								clip-rule="evenodd"
+							></path>
+						</svg>
+						<span class="text-sm text-gray-700">
+							{entry.status_text}
+							<span class="block text-xs text-gray-500 mt-1">
+								{new Date(entry.timestamp).toLocaleString()}
+							</span>
 						</span>
-					</span>
-				</li>
-			))}
-		</ul>
+					</li>
+				))}
+			</ul>
+		);
+	}
+
+	// Compact view for historical logs (isLiveView = false)
+	return (
+		<div class={`border rounded-lg bg-gray-50 ${isLiveView ? "p-4 mt-4" : "p-3"}`}>
+			{/* Title is only needed if it's not part of a collapsible section summary */}
+			{/* <h3 class="text-md font-semibold mb-2">{title}</h3> */}
+			<ul class={`space-y-1 ${isLiveView ? 'space-y-2' : ''}`}>
+				{statusHistory.map((entry, index) => (
+					<li key={index} class={`text-gray-700 ${isLiveView ? 'text-sm' : 'text-xs'}`}>
+						{/* Timestamp only for live view, or consider a more compact format for non-live */}
+						{/* {isLiveView && <span class="font-medium">{new Date(entry.timestamp).toLocaleString()}</span>} */}
+						{/* {isLiveView ? ": " : ""} */}
+						{entry.status_text}
+					</li>
+				))}
+			</ul>
+		</div>
 	);
 };
 
@@ -579,6 +605,7 @@ export const ResearchDetails: FC = (props) => {
 					</h3>
 					<ResearchStatusHistoryDisplay
 						statusHistory={researchData.statusHistory}
+						isLiveView={true}
 					/>
 					<div
 						id={statusUpdateIndicatorId}
@@ -614,7 +641,7 @@ export const ResearchDetails: FC = (props) => {
 			  <details className="mt-4 mb-8">
 			    <summary className="cursor-pointer font-semibold text-gray-800 mb-3">Research History</summary>
 			    <div className="mt-2">
-			      <ResearchStatusHistoryDisplay statusHistory={researchData.statusHistory} />
+			      <ResearchStatusHistoryDisplay statusHistory={researchData.statusHistory} isLiveView={false} />
 			    </div>
 			  </details>
 			)}
