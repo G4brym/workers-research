@@ -1,4 +1,12 @@
 function loadNewResearch() {
+	// Initial state based on potential pre-checked (though it's not by default here)
+	document.addEventListener('DOMContentLoaded', () => {
+		const useAutoRagCheckbox = document.getElementById('use_autorag_checkbox');
+		if (useAutoRagCheckbox) {
+			toggleAutoRagDropdown(useAutoRagCheckbox.checked);
+		}
+	});
+
 	// HTMX event handlers
 	document.addEventListener("htmx:beforeRequest", (evt) => {
 		const query = document.getElementById("initial-query").value.trim();
@@ -208,8 +216,22 @@ function deleteItem(id) {
 }
 
 function toggleDropdown(id) {
-  const dropdownElement = document.getElementById(`download-dropdown-${id}`);
-  if (dropdownElement) {
-    dropdownElement.classList.toggle('hidden');
-  }
+	const dropdownElement = document.getElementById(`download-dropdown-${id}`);
+	if (dropdownElement) {
+		dropdownElement.classList.toggle('hidden');
+	}
+}
+
+function toggleAutoRagDropdown(checked) {
+	const dropdown = document.getElementById('autorag_id_dropdown_container');
+	if (dropdown) {
+		dropdown.style.display = checked ? 'block' : 'none';
+	}
+	const selectElement = document.getElementById('autorag_id_select');
+	if (selectElement) {
+		selectElement.disabled = !checked;
+		if (!checked) {
+			selectElement.value = ""; // Clear selection when hiding
+		}
+	}
 }

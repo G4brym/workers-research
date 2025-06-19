@@ -581,40 +581,15 @@ export const ResearchDetails: FC = (props) => {
 };
 
 interface CreateResearchProps {
-	userRags?: { id: string; name?: string }[];
+	userRags?: { id: string }[];
 }
 
 export const CreateResearch: FC<CreateResearchProps> = (props) => {
 	const { userRags } = props;
 	const hasRags = userRags && userRags.length > 0;
 
-	// Script to toggle AutoRAG ID dropdown
-	const script = `
-    function toggleAutoRagDropdown(checked) {
-      const dropdown = document.getElementById('autorag_id_dropdown_container');
-      if (dropdown) {
-        dropdown.style.display = checked ? 'block' : 'none';
-      }
-      const selectElement = document.getElementById('autorag_id_select');
-      if (selectElement) {
-        selectElement.disabled = !checked;
-		if (!checked) {
-			selectElement.value = ""; // Clear selection when hiding
-		}
-      }
-    }
-	// Initial state based on potential pre-checked (though it's not by default here)
-	document.addEventListener('DOMContentLoaded', () => {
-		const useAutoRagCheckbox = document.getElementById('use_autorag_checkbox');
-		if (useAutoRagCheckbox) {
-			toggleAutoRagDropdown(useAutoRagCheckbox.checked);
-		}
-	});
-  `;
-
 	return (
 		<main class="max-w-4xl mx-auto px-4 py-8">
-			{html`<script>${script}</script>`}
 			<div class="mb-8">
 				<h2 class="text-2xl font-bold text-gray-900 mb-2">
 					Start New Research
@@ -729,7 +704,7 @@ export const CreateResearch: FC<CreateResearchProps> = (props) => {
 								>
 									<option value="">-- Select an AutoRAG --</option>
 									{userRags.map(rag => (
-										<option value={rag.id}>{rag.name || rag.id}</option>
+										<option value={rag.id}>{rag.id}</option>
 									))}
 								</select>
 							</div>

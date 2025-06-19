@@ -337,6 +337,7 @@ async function addResearchStatusHistoryEntry(
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
 		const qb = new D1QB(this.env.DB);
+		qb.setDebugger(true)
 		const { query, questions, breadth, depth, id, initialLearnings } =
 			event.payload;
 

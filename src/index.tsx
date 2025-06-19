@@ -127,7 +127,7 @@ app.get("/create", async (c) => {
 					← Back to Reports
 				</a>
 			</TopBar>
-			<CreateResearch userRags={userRags?.rags} />
+			<CreateResearch userRags={userRags} />
 			<script>loadNewResearch()</script>
 		</Layout>,
 	);
@@ -219,26 +219,9 @@ app.post("/create", async (c) => {
 		autorag_id,
 	};
 
-	await c.env.RESEARCH_WORKFLOW.create({
-		id,
-		params: {
-			...researchData,
-			start_ms: Date.now(),
-		},
-	});
-
 	const dbData: ResearchTypeDB = {
-		id: researchData.id,
-		query: researchData.query,
-		title: researchData.title,
-		duration: researchData.duration,
-		depth: researchData.depth,
-		breadth: researchData.breadth,
-		status: researchData.status,
+		...researchData,
 		questions: JSON.stringify(researchData.questions),
-		result: researchData.result,
-		created_at: researchData.created_at,
-		initialLearnings: researchData.initialLearnings,
 		browse_internet: browse_internet ? 1 : 0,
 		autorag_id: autorag_id,
 	};
@@ -250,6 +233,14 @@ app.post("/create", async (c) => {
 			data: dbData,
 		})
 		.execute();
+
+	await c.env.RESEARCH_WORKFLOW.create({
+		id,
+		params: {
+			...researchData,
+			start_ms: Date.now(),
+		},
+	});
 
 	return c.redirect(`/details/${id}`);
 });
