@@ -66,4 +66,14 @@ export const migrations: Migration[] = [
 		);
     `,
 	},
+	{
+		name: "0007_add_browse_internet_and_autorag_id_columns.sql",
+		sql: `
+		ALTER TABLE researches
+		ADD COLUMN browse_internet INTEGER DEFAULT 1;
+
+		ALTER TABLE researches
+		ADD COLUMN autorag_id TEXT;
+		`,
+	},
 ];
