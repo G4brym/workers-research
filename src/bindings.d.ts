@@ -9,6 +9,7 @@ export type Env = {
 	AI_GATEWAY_ACCOUNT_ID?: string;
 	AI_GATEWAY_API_KEY?: string;
 	BROWSER: Fetcher;
+	AI: Ai;
 };
 
 export type Variables = {

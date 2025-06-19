@@ -8,6 +8,9 @@ workers_dev = true
 [observability]
 enabled = true
 
+[ai]
+binding = "AI"
+
 [build]
 command = "npm run build-css"
 watch_dir = "./src"

@@ -30,14 +30,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
-		"@cloudflare/workers-types": "^4.20250607.0",
+		"@cloudflare/workers-types": "^4.20250619.0",
 		"@tailwindcss/cli": "^4.1.8",
 		"@types/node": "^22.15.30",
 		"tailwindcss": "^4.1.8",
 		"typescript": "^5.8.3",
 		"unenv": "^2.0.0-rc.17",
 		"vitest": "^3.2.3",
-		"wrangler": "^4.19.1"
+		"wrangler": "^4.20.3"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^1.2.19",

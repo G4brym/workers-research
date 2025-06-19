@@ -115,6 +115,8 @@ app.get("/", async (c) => {
 });
 
 app.get("/create", async (c) => {
+	const myRags = await c.env.AI.autorag().list()
+
 	return c.html(
 		<Layout>
 			<TopBar>
