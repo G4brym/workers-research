@@ -609,6 +609,16 @@ export const ResearchDetails: FC = (props) => {
 				</div>
 			)}
 
+			{/* Add this new section for research history */}
+			{(researchData.status === 2 || researchData.status === 3) && researchData.statusHistory && researchData.statusHistory.length > 0 && (
+			  <details className="mt-4 mb-8">
+			    <summary className="cursor-pointer font-semibold text-gray-800 mb-3">Research History</summary>
+			    <div className="mt-2">
+			      <ResearchStatusHistoryDisplay statusHistory={researchData.statusHistory} />
+			    </div>
+			  </details>
+			)}
+
 			{/* Report Content - direct child of main */}
 			{researchData.status !== 1 && (
 				<div className="prose prose-lg max-w-none">

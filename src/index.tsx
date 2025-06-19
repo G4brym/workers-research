@@ -273,7 +273,7 @@ app.get("/details/:id", async (c) => {
 		.replaceAll("```", "");
 
 	let statusHistory: any[] = [];
-	if (resp.results && resp.results.status === 1) {
+	if (resp.results && (resp.results.status === 1 || resp.results.status === 2 || resp.results.status === 3)) {
 		const historyQb = new D1QB(c.env.DB);
 		const historyResult = await historyQb
 			.select<{ status_text: string; timestamp: string }>(
