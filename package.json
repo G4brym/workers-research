@@ -4,11 +4,7 @@
 	"description": "A serverless, AI-powered deep research agent built with Cloudflare Workers and Google Gemini 2.5",
 	"main": "./dist/index.js",
 	"type": "module",
-	"files": [
-		"dist",
-		"LICENSE",
-		"README.md"
-	],
+	"files": ["dist", "LICENSE", "README.md"],
 	"scripts": {
 		"build": "tsup src/index.ts --format cjs,esm --external cloudflare:workers",
 		"build-css": "npx @tailwindcss/cli -i ./src/templates/styles.css -o ./src/static/styles.css",

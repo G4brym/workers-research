@@ -457,11 +457,17 @@ export const ResearchDetails: FC = (props) => {
 
 			{/* Research Parameters Section */}
 			<div className="mb-8 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-				<h3 class="text-lg font-semibold text-gray-800 mb-4">Research Parameters</h3>
+				<h3 class="text-lg font-semibold text-gray-800 mb-4">
+					Research Parameters
+				</h3>
 				<div className="space-y-3">
 					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
 						<span class="text-sm font-medium text-gray-600">Duration:</span>
-						<span class="text-sm text-gray-800">{researchData.duration ? formatDuration(researchData.duration) : "N/A"}</span>
+						<span class="text-sm text-gray-800">
+							{researchData.duration
+								? formatDuration(researchData.duration)
+								: "N/A"}
+						</span>
 					</div>
 					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
 						<span class="text-sm font-medium text-gray-600">Depth:</span>
@@ -472,13 +478,19 @@ export const ResearchDetails: FC = (props) => {
 						<span class="text-sm text-gray-800">{researchData.breadth}</span>
 					</div>
 					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
-						<span class="text-sm font-medium text-gray-600">Browse Internet:</span>
-						<span class="text-sm text-gray-800">{researchData.browse_internet === 1 ? "Yes" : "No"}</span>
+						<span class="text-sm font-medium text-gray-600">
+							Browse Internet:
+						</span>
+						<span class="text-sm text-gray-800">
+							{researchData.browse_internet === 1 ? "Yes" : "No"}
+						</span>
 					</div>
 					{researchData.autorag_id && researchData.autorag_id !== "" && (
 						<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
 							<span class="text-sm font-medium text-gray-600">AutoRAG ID:</span>
-							<span class="text-sm text-gray-800">{researchData.autorag_id}</span>
+							<span class="text-sm text-gray-800">
+								{researchData.autorag_id}
+							</span>
 						</div>
 					)}
 				</div>
@@ -713,12 +725,16 @@ export const CreateResearch: FC<CreateResearchProps> = (props) => {
 						{!hasRags && (
 							<p class="text-sm text-gray-500">
 								You don't have any AutoRAGs.{" "}
-								{html`<a href='https://google.com' target='_blank' class='text-blue-600 hover:underline'>Click here</a>`}
-								{" "}to create one.
+								{html`<a href='https://google.com' target='_blank' class='text-blue-600 hover:underline'>Click here</a>`}{" "}
+								to create one.
 							</p>
 						)}
 						{hasRags && (
-							<div id="autorag_id_dropdown_container" style="display: none;" class="mt-2">
+							<div
+								id="autorag_id_dropdown_container"
+								style="display: none;"
+								class="mt-2"
+							>
 								<label
 									htmlFor="autorag_id_select"
 									class="block text-sm font-medium text-gray-700 mb-1"
@@ -732,7 +748,7 @@ export const CreateResearch: FC<CreateResearchProps> = (props) => {
 									class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 								>
 									<option value="">-- Select an AutoRAG --</option>
-									{userRags.map(rag => (
+									{userRags.map((rag) => (
 										<option value={rag.id}>{rag.id}</option>
 									))}
 								</select>

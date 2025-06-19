@@ -56,7 +56,7 @@ async function deepResearch({
 		await addResearchStatusHistoryEntry(
 			qb,
 			researchId,
-			`Executing search for query: ${serpQuery.query}`,
+			`Executing web search for query: ${serpQuery.query}`,
 		);
 		const result = await step.do("perform_web_search", async () => {
 			try {
@@ -97,7 +97,7 @@ async function deepResearch({
 				return await processSerpResult({
 					env,
 					query: serpQuery.query,
-					result,
+					result: result.map((item) => item.markdown),
 					numFollowUpQuestions: newBreadth,
 				});
 			},
@@ -131,6 +131,117 @@ async function deepResearch({
 	return { learnings: allLearnings, visitedUrls: allUrls };
 }
 
+async function deepResearchAutoRAG({
+	step,
+	env,
+	autorag,
+	query,
+	breadth,
+	depth,
+	learnings: initialLearningsParam, // Renamed to avoid conflict
+	visitedUrls,
+	qb,
+	researchId,
+}: {
+	step: WorkflowStep;
+	env: Env;
+	autorag: AutoRAG;
+	query: string;
+	breadth: number;
+	depth: number;
+	learnings: string[]; // Keep this as string[]
+	visitedUrls: string[];
+	qb: D1QB;
+	researchId: string;
+}) {
+	const serpQueries = await step.do("generate_serp_queries", () =>
+		generateSerpQueries({
+			env,
+			query,
+			learnings: initialLearningsParam,
+			numQueries: breadth,
+		}),
+	);
+
+	let allLearnings = [...initialLearningsParam]; // Use the passed learnings
+	let allUrls = [...visitedUrls];
+
+	for (const serpQuery of serpQueries) {
+		await addResearchStatusHistoryEntry(
+			qb,
+			researchId,
+			`Executing AutoRAG search for query: ${serpQuery.query}`,
+		);
+		const result = await step.do("perform_autorag_search", async () => {
+			try {
+				return await autorag.search({
+					query: serpQuery.query,
+					max_num_results: 5,
+				});
+			} catch (e: any) {
+				console.error(e);
+				await addResearchStatusHistoryEntry(
+					qb,
+					researchId,
+					`Error during AutoRAG search for query ${serpQuery.query}: ${e.message}`,
+				);
+				return null;
+			}
+		});
+
+		if (result.data.length === 0) {
+			// web search provably failed, no learnings to get
+			continue;
+		}
+
+		const newUrls = result.data
+			.map((item) => `AutoRAG: ${item.filename}`)
+			.filter(Boolean);
+		const newBreadth = Math.ceil(breadth / 2);
+		const newDepth = depth - 1;
+
+		const { learnings: newLearnings, followUpQuestions } = await step.do(
+			"extract_learnings_from_search",
+			async () => {
+				return await processSerpResult({
+					env,
+					query: serpQuery.query,
+					result: result.data.map((item) =>
+						item.content.map((c) => c.text).join("\n\n-----\n\n"),
+					),
+					numFollowUpQuestions: newBreadth,
+				});
+			},
+		);
+
+		allLearnings = [...allLearnings, ...newLearnings];
+		allUrls = [...allUrls, ...newUrls];
+
+		if (newDepth > 0) {
+			const nextQuery = `
+          Previous research goal: ${serpQuery.researchGoal}
+          Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
+        `.trim();
+			const recursiveResult = await deepResearchAutoRAG({
+				step,
+				env,
+				autorag,
+				query: nextQuery,
+				breadth: newBreadth,
+				depth: newDepth,
+				learnings: allLearnings,
+				visitedUrls: allUrls,
+				qb,
+				researchId,
+			});
+			allLearnings = [...allLearnings, ...recursiveResult.learnings];
+			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
+		}
+	}
+
+	return { learnings: allLearnings, visitedUrls: allUrls };
+}
+
 export async function processSerpResult({
 	env,
 	query,
@@ -140,11 +251,11 @@ export async function processSerpResult({
 }: {
 	env: Env;
 	query: string;
-	result: SearchResult[];
+	result: string[];
 	numLearnings?: number;
 	numFollowUpQuestions?: number;
 }) {
-	const contents = result.map((item) => item.markdown).filter(Boolean);
+	const contents = result.filter(Boolean);
 
 	const model = getModel(env);
 	const schema = z.object({
@@ -337,7 +448,7 @@ async function addResearchStatusHistoryEntry(
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
 		const qb = new D1QB(this.env.DB);
-		qb.setDebugger(true)
+		qb.setDebugger(true);
 		const { query, questions, breadth, depth, id, initialLearnings } =
 			event.payload;
 
@@ -356,27 +467,56 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 
 			const browser = await getBrowser(this.env);
 
-			console.log("Starting research...");
-			const researchResult = await deepResearch({
-				step,
-				env: this.env,
-				browser,
-				query: fullQuery,
-				breadth: Number.parseInt(breadth),
-				depth: Number.parseInt(depth),
-				learnings: processedLearnings,
-				visitedUrls: [],
-				qb,
-				researchId: id,
-			});
+			let learnings = [];
+			let visitedUrls = [];
+
+			if (event.payload.browse_internet) {
+				console.log("Starting research on the internet...");
+				const researchResult = await deepResearch({
+					step,
+					env: this.env,
+					browser,
+					query: fullQuery,
+					breadth: Number.parseInt(breadth),
+					depth: Number.parseInt(depth),
+					learnings: processedLearnings,
+					visitedUrls: [],
+					qb,
+					researchId: id,
+				});
+
+				learnings = [...learnings, ...researchResult.learnings];
+				visitedUrls = [...visitedUrls, ...researchResult.visitedUrls];
+			}
+
+			if (event.payload.autorag_id) {
+				console.log(
+					`Starting research on the AutoRAG (${event.payload.autorag_id})...`,
+				);
+				const researchResult = await deepResearchAutoRAG({
+					step,
+					env: this.env,
+					autorag: this.env.AI.autorag(event.payload.autorag_id),
+					query: fullQuery,
+					breadth: Number.parseInt(breadth),
+					depth: Number.parseInt(depth),
+					learnings: processedLearnings,
+					visitedUrls: [],
+					qb,
+					researchId: id,
+				});
+
+				learnings = [...learnings, ...researchResult.learnings];
+				visitedUrls = [...visitedUrls, ...researchResult.visitedUrls];
+			}
 
 			console.log("Generating report");
 			const report = await step.do("generate_final_report", () =>
 				writeFinalReport({
 					env: this.env,
 					prompt: fullQuery,
-					learnings: researchResult.learnings,
-					visitedUrls: researchResult.visitedUrls,
+					learnings: learnings,
+					visitedUrls: visitedUrls,
 				}),
 			);
 			await addResearchStatusHistoryEntry(
@@ -399,8 +539,8 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 
 			console.log("Workflow finished!");
 			return {
-				learnings: researchResult.learnings,
-				visitedUrls: researchResult.visitedUrls,
+				learnings: learnings,
+				visitedUrls: visitedUrls,
 				report,
 			};
 		} catch (error: any) {
