@@ -117,6 +117,35 @@ function loadNewResearch() {
 						finalForm.appendChild(answerField);
 					});
 
+					// Ensure browse_internet and autorag_id are included in the final submission
+					const browseInternetCheckbox = document.getElementById('browse_internet_checkbox');
+					if (browseInternetCheckbox) {
+						const browseInternetField = document.createElement('input');
+						browseInternetField.type = 'hidden';
+						browseInternetField.name = 'browse_internet';
+						browseInternetField.value = browseInternetCheckbox.checked ? 'on' : 'off';
+						finalForm.appendChild(browseInternetField);
+					}
+
+					const useAutoRagCheckbox = document.getElementById('use_autorag_checkbox');
+					const autoRagSelect = document.getElementById('autorag_id_select');
+					if (useAutoRagCheckbox && autoRagSelect && useAutoRagCheckbox.checked) {
+						const autoRagIdField = document.createElement('input');
+						autoRagIdField.type = 'hidden';
+						autoRagIdField.name = 'autorag_id';
+						autoRagIdField.value = autoRagSelect.value;
+						finalForm.appendChild(autoRagIdField);
+					} else {
+						// If not using AutoRAG, ensure we send an empty value if the field is expected
+						// or make sure no old value is lingering if the field was dynamically added before
+						// For this case, sending "" for autorag_id will be converted to null by the backend.
+						const autoRagIdField = document.createElement('input');
+						autoRagIdField.type = 'hidden';
+						autoRagIdField.name = 'autorag_id';
+						autoRagIdField.value = "";
+						finalForm.appendChild(autoRagIdField);
+					}
+
 					// Submit the final form
 					finalForm.submit();
 				});
