@@ -11,6 +11,7 @@
 - **Serverless on Cloudflare:** Built with Workers and Workflows for scalability, reliability, and cost-effectiveness.
 - **Intuitive Dashboard:** Manage and view research via a Hono/JSX web interface.
 - **Simplified Architecture:** Gemini 2.5's large context window removes the need for prompt compression, enhancing report quality.
+- **AutoRAG Integration:** Allows the system to perform research using Cloudflare AI's AutoRAG feature, which queries against a pre-indexed dataset. This can be used as an alternative or in conjunction with standard web browsing research. The AutoRAG feature is invoked when an `autorag_id` is provided with the research request.
 
 ## 🚀 Inspiration and Acknowledgements
 
