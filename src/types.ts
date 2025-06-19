@@ -14,6 +14,8 @@ export type ResearchType = {
 	created_at?: string;
 	start_ms?: number;
 	initialLearnings?: string;
+	browse_internet?: boolean;
+	autorag_id?: string;
 };
 
 export type ResearchTypeDB = {
@@ -28,4 +30,6 @@ export type ResearchTypeDB = {
 	result?: string;
 	created_at?: string;
 	initialLearnings?: string;
+	browse_internet: number;
+	autorag_id?: string;
 };

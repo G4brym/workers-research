@@ -115,7 +115,7 @@ app.get("/", async (c) => {
 });
 
 app.get("/create", async (c) => {
-	const myRags = await c.env.AI.autorag().list()
+	const userRags = await c.env.AI.autorag().list()
 
 	return c.html(
 		<Layout>
@@ -127,7 +127,7 @@ app.get("/create", async (c) => {
 					← Back to Reports
 				</a>
 			</TopBar>
-			<CreateResearch />
+			<CreateResearch userRags={userRags?.rags} />
 			<script>loadNewResearch()</script>
 		</Layout>,
 	);
@@ -201,6 +201,10 @@ app.post("/create", async (c) => {
 	});
 
 	const initialLearnings = form.get("initial-learnings") as string | undefined;
+	const browseInternetFormValue = form.get("browse_internet");
+	const browse_internet = browseInternetFormValue === "on" || browseInternetFormValue === "" || browseInternetFormValue === null ? true : false; // default to true if present (even as empty string from checked) or not present at all.
+	const autorag_id_form = form.get("autorag_id") as string | null;
+	const autorag_id = autorag_id_form === "" ? null : autorag_id_form;
 
 	const researchData: ResearchType = {
 		id,
@@ -211,6 +215,8 @@ app.post("/create", async (c) => {
 		questions: processedQuestions,
 		status: 1, // Starting status
 		initialLearnings: initialLearnings || "", // Ensure it's a string
+		browse_internet,
+		autorag_id,
 	};
 
 	await c.env.RESEARCH_WORKFLOW.create({
@@ -221,9 +227,20 @@ app.post("/create", async (c) => {
 		},
 	});
 
-	const dbData = {
-		...researchData,
+	const dbData: ResearchTypeDB = {
+		id: researchData.id,
+		query: researchData.query,
+		title: researchData.title,
+		duration: researchData.duration,
+		depth: researchData.depth,
+		breadth: researchData.breadth,
+		status: researchData.status,
 		questions: JSON.stringify(researchData.questions),
+		result: researchData.result,
+		created_at: researchData.created_at,
+		initialLearnings: researchData.initialLearnings,
+		browse_internet: browse_internet ? 1 : 0,
+		autorag_id: autorag_id,
 	};
 
 	const qb = new D1QB(c.env.DB);
