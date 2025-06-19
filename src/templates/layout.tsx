@@ -455,6 +455,35 @@ export const ResearchDetails: FC = (props) => {
 				</div>
 			</div>
 
+			{/* Research Parameters Section */}
+			<div className="mb-8 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+				<h3 class="text-lg font-semibold text-gray-800 mb-4">Research Parameters</h3>
+				<div className="space-y-3">
+					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
+						<span class="text-sm font-medium text-gray-600">Duration:</span>
+						<span class="text-sm text-gray-800">{researchData.duration ? formatDuration(researchData.duration) : "N/A"}</span>
+					</div>
+					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
+						<span class="text-sm font-medium text-gray-600">Depth:</span>
+						<span class="text-sm text-gray-800">{researchData.depth}</span>
+					</div>
+					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
+						<span class="text-sm font-medium text-gray-600">Breadth:</span>
+						<span class="text-sm text-gray-800">{researchData.breadth}</span>
+					</div>
+					<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
+						<span class="text-sm font-medium text-gray-600">Browse Internet:</span>
+						<span class="text-sm text-gray-800">{researchData.browse_internet === 1 ? "Yes" : "No"}</span>
+					</div>
+					{researchData.autorag_id && researchData.autorag_id !== "" && (
+						<div className="flex justify-between items-center py-2 border-b last:border-b-0 border-gray-100">
+							<span class="text-sm font-medium text-gray-600">AutoRAG ID:</span>
+							<span class="text-sm text-gray-800">{researchData.autorag_id}</span>
+						</div>
+					)}
+				</div>
+			</div>
+
 			{/* Research Context Section - direct child of main */}
 			<div className="mb-8">
 				<details className="group">
