@@ -104,7 +104,14 @@ export const Layout: FC = (props) => {
 				<div class="flex-grow">{props.children}</div>
 				<footer class="bg-gray-100 border-t border-gray-200 py-4 text-center text-sm text-gray-600">
 					<div class="max-w-6xl mx-auto px-4 flex items-center justify-center">
-						<span>workers-research</span>
+						<a
+							href="https://github.com/G4brym/workers-research"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="hover:text-gray-900 hover:underline"
+						>
+							workers-research
+						</a>
 						<a
 							href="https://github.com/G4brym/workers-research"
 							target="_blank"
@@ -113,7 +120,7 @@ export const Layout: FC = (props) => {
 							aria-label="GitHub Repository"
 						>
 							<svg
-								class="w-5 h-5 inline-block"
+								class="w-4 h-4 inline-block"
 								fill="currentColor"
 								viewBox="0 0 20 20"
 								aria-hidden="true"
