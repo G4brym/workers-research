@@ -5,6 +5,7 @@ import type { Env } from "./bindings";
 import { RESEARCH_PROMPT } from "./prompts";
 import { getFallbackModel, getModel, getModelThinking } from "./utils"; // Adjust path as needed
 import {
+	deduplicateLearnings,
 	generateSerpQueries,
 	processSerpResult,
 	writeFinalReport,
@@ -55,8 +56,16 @@ describe("processSerpResult with fallback", () => {
 	test("should use fallback model on AI_RetryError and succeed", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
 		const mockFallbackModel = { id: "gemini-2.0-flash-test" }; // Updated
-		const mockSuccessResponse = {
-			learnings: ["test learning"],
+		// New schema with confidence levels
+		const mockApiResponse = {
+			learnings: [
+				{ text: "test learning", confidence: "HIGH", sourceIndex: 0 },
+			],
+			followUpQuestions: ["test q"],
+		};
+		// Expected result after formatting
+		const expectedResult = {
+			learnings: ["[HIGH] test learning [Source: test.com]"],
 			followUpQuestions: ["test q"],
 		};
 
@@ -78,7 +87,7 @@ describe("processSerpResult with fallback", () => {
 			.mockImplementationOnce(async (options) => {
 				// console.log('generateObject mock call 2, model:', options.model.id);
 				if (options.model.id === mockFallbackModel.id) {
-					return { object: mockSuccessResponse };
+					return { object: mockApiResponse };
 				}
 				throw new Error(
 					`Unexpected call to fallback model mock. Expected ${mockFallbackModel.id}, got ${options.model.id}`,
@@ -88,7 +97,8 @@ describe("processSerpResult with fallback", () => {
 		const result = await processSerpResult({
 			env: mockEnv,
 			query: "test query",
-			result: [{ url: "test.com", markdown: "content", title: "Test Content" }],
+			result: ["content"],
+			sourceUrls: ["test.com"],
 		});
 
 		expect(getModel).toHaveBeenCalledTimes(1);
@@ -99,7 +109,7 @@ describe("processSerpResult with fallback", () => {
 		expect(calls[0][0].model).toEqual(mockPrimaryModel);
 		expect(calls[1][0].model).toEqual(mockFallbackModel);
 
-		expect(result).toEqual(mockSuccessResponse);
+		expect(result).toEqual(expectedResult);
 	});
 
 	test("should re-throw error if fallback model also fails with AI_RetryError", async () => {
@@ -131,9 +141,8 @@ describe("processSerpResult with fallback", () => {
 			processSerpResult({
 				env: mockEnv,
 				query: "test query",
-				result: [
-					{ url: "test.com", markdown: "content", title: "Test Content" },
-				],
+				result: ["content"],
+				sourceUrls: ["test.com"],
 			}),
 		).rejects.toThrow(retryError);
 
@@ -159,9 +168,8 @@ describe("processSerpResult with fallback", () => {
 			processSerpResult({
 				env: mockEnv,
 				query: "test query",
-				result: [
-					{ url: "test.com", markdown: "content", title: "Test Content" },
-				],
+				result: ["content"],
+				sourceUrls: ["test.com"],
 			}),
 		).rejects.toThrow(genericError);
 
@@ -172,15 +180,27 @@ describe("processSerpResult with fallback", () => {
 
 	test("should succeed on first try without fallback", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
-		const mockSuccessResponse = {
-			learnings: ["successful learning"],
+		// New schema with confidence levels
+		const mockApiResponse = {
+			learnings: [
+				{
+					text: "successful learning",
+					confidence: "MEDIUM",
+					sourceIndex: 0,
+				},
+			],
+			followUpQuestions: ["successful q"],
+		};
+		// Expected result after formatting
+		const expectedResult = {
+			learnings: ["[MEDIUM] successful learning [Source: test-success.com]"],
 			followUpQuestions: ["successful q"],
 		};
 
 		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
 		(generateObject as vi.Mock).mockImplementationOnce(async (options) => {
 			if (options.model.id === mockPrimaryModel.id) {
-				return { object: mockSuccessResponse };
+				return { object: mockApiResponse };
 			}
 			throw new Error("Unexpected model call");
 		});
@@ -188,13 +208,8 @@ describe("processSerpResult with fallback", () => {
 		const result = await processSerpResult({
 			env: mockEnv,
 			query: "test query success",
-			result: [
-				{
-					url: "test-success.com",
-					markdown: "success content",
-					title: "Test Success Content",
-				},
-			],
+			result: ["success content"],
+			sourceUrls: ["test-success.com"],
 		});
 
 		expect(getModel).toHaveBeenCalledTimes(1);
@@ -203,7 +218,7 @@ describe("processSerpResult with fallback", () => {
 		expect((generateObject as vi.Mock).mock.calls[0][0].model).toEqual(
 			mockPrimaryModel,
 		);
-		expect(result).toEqual(mockSuccessResponse);
+		expect(result).toEqual(expectedResult);
 	});
 
 	// Similar tests could be added for generateSerpQueries and writeFinalReport
@@ -327,5 +342,259 @@ describe("writeFinalReport with fallback", () => {
 			mockFallbackModel,
 		);
 		expect(result).toEqual(expectedReport);
+	});
+});
+
+// Tests for deduplicateLearnings
+describe("deduplicateLearnings", () => {
+	test("should remove exact duplicates", () => {
+		const learnings = [
+			"[HIGH] Learning about AI [Source: ai.com]",
+			"[HIGH] Learning about AI [Source: ai.com]",
+			"[MEDIUM] Different learning [Source: diff.com]",
+		];
+
+		const result = deduplicateLearnings(learnings);
+
+		expect(result).toHaveLength(2);
+		expect(result).toContain("[HIGH] Learning about AI [Source: ai.com]");
+		expect(result).toContain("[MEDIUM] Different learning [Source: diff.com]");
+	});
+
+	test("should remove semantically similar learnings", () => {
+		const learnings = [
+			"[HIGH] Machine learning is a subset of artificial intelligence [Source: ml.com]",
+			"[MEDIUM] Machine learning is a part of artificial intelligence [Source: ai.com]",
+			"[LOW] Quantum computing is a different field [Source: qc.com]",
+		];
+
+		const result = deduplicateLearnings(learnings);
+
+		// Should keep the first occurrence and the quantum computing one
+		expect(result).toHaveLength(2);
+		expect(result).toContain(
+			"[HIGH] Machine learning is a subset of artificial intelligence [Source: ml.com]",
+		);
+		expect(result).toContain(
+			"[LOW] Quantum computing is a different field [Source: qc.com]",
+		);
+	});
+
+	test("should handle empty array", () => {
+		const result = deduplicateLearnings([]);
+		expect(result).toEqual([]);
+	});
+
+	test("should handle single item", () => {
+		const learnings = ["[HIGH] Single learning [Source: single.com]"];
+		const result = deduplicateLearnings(learnings);
+		expect(result).toEqual(learnings);
+	});
+
+	test("should preserve order of unique learnings", () => {
+		const learnings = [
+			"[HIGH] First learning [Source: first.com]",
+			"[MEDIUM] Second learning [Source: second.com]",
+			"[LOW] Third learning [Source: third.com]",
+		];
+
+		const result = deduplicateLearnings(learnings);
+
+		expect(result).toEqual(learnings);
+	});
+});
+
+// Edge case tests for processSerpResult
+describe("processSerpResult edge cases", () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		(getModel as vi.Mock).mockReturnValue({ id: "gemini-1.5-flash-test" });
+		(getFallbackModel as vi.Mock).mockReturnValue({
+			id: "gemini-2.0-flash-test",
+		});
+	});
+
+	test("should handle empty learnings array", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
+		const mockApiResponse = {
+			learnings: [],
+			followUpQuestions: ["follow up"],
+		};
+
+		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+
+		const result = await processSerpResult({
+			env: mockEnv,
+			query: "test query",
+			result: ["content"],
+			sourceUrls: ["test.com"],
+		});
+
+		expect(result.learnings).toEqual([]);
+		expect(result.followUpQuestions).toEqual(["follow up"]);
+	});
+
+	test("should handle empty follow-up questions", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
+		const mockApiResponse = {
+			learnings: [{ text: "learning", confidence: "HIGH", sourceIndex: 0 }],
+			followUpQuestions: [],
+		};
+
+		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+
+		const result = await processSerpResult({
+			env: mockEnv,
+			query: "test query",
+			result: ["content"],
+			sourceUrls: ["test.com"],
+		});
+
+		expect(result.learnings).toHaveLength(1);
+		expect(result.followUpQuestions).toEqual([]);
+	});
+
+	test("should handle sourceIndex out of bounds gracefully", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
+		const mockApiResponse = {
+			learnings: [
+				{ text: "learning", confidence: "HIGH", sourceIndex: 99 }, // Out of bounds
+			],
+			followUpQuestions: [],
+		};
+
+		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+
+		const result = await processSerpResult({
+			env: mockEnv,
+			query: "test query",
+			result: ["content"],
+			sourceUrls: ["test.com"],
+		});
+
+		// Out of bounds sourceIndex should result in no source info
+		expect(result.learnings[0]).toBe("[HIGH] learning");
+		expect(result.learnings[0]).not.toContain("[Source:");
+	});
+
+	test("should handle multiple learnings with different confidence levels", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
+		const mockApiResponse = {
+			learnings: [
+				{ text: "high confidence", confidence: "HIGH", sourceIndex: 0 },
+				{ text: "medium confidence", confidence: "MEDIUM", sourceIndex: 1 },
+				{ text: "low confidence", confidence: "LOW", sourceIndex: 0 },
+			],
+			followUpQuestions: [],
+		};
+
+		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+
+		const result = await processSerpResult({
+			env: mockEnv,
+			query: "test query",
+			result: ["content1", "content2"],
+			sourceUrls: ["source1.com", "source2.com"],
+		});
+
+		expect(result.learnings).toHaveLength(3);
+		expect(result.learnings[0]).toContain("[HIGH]");
+		expect(result.learnings[1]).toContain("[MEDIUM]");
+		expect(result.learnings[2]).toContain("[LOW]");
+	});
+});
+
+// Tests for writeFinalReport edge cases
+describe("writeFinalReport edge cases", () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+		(getModelThinking as vi.Mock).mockReturnValue({
+			id: "gemini-1.5-flash-test-report",
+		});
+		(getFallbackModel as vi.Mock).mockReturnValue({
+			id: "gemini-2.0-flash-test",
+		});
+	});
+
+	test("should deduplicate URLs in sources section", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test-report" };
+		const mockSuccessText = "Report content.";
+
+		(getModelThinking as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateText as vi.Mock).mockResolvedValue({
+			text: mockSuccessText,
+			toolCalls: [],
+			toolResults: [],
+			finishReason: "stop",
+			usage: { promptTokens: 10, completionTokens: 10 },
+			warnings: [],
+		});
+
+		const result = await writeFinalReport({
+			env: mockEnv,
+			prompt: "test prompt",
+			learnings: ["learning 1"],
+			visitedUrls: ["url1.com", "url2.com", "url1.com", "url3.com", "url2.com"],
+		});
+
+		// Should only have unique URLs
+		const sourcesSection = result.split("## Sources")[1];
+		const urlCount = (sourcesSection.match(/url1\.com/g) || []).length;
+		expect(urlCount).toBe(1);
+	});
+
+	test("should handle empty learnings", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test-report" };
+		const mockSuccessText = "Report with no learnings.";
+
+		(getModelThinking as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateText as vi.Mock).mockResolvedValue({
+			text: mockSuccessText,
+			toolCalls: [],
+			toolResults: [],
+			finishReason: "stop",
+			usage: { promptTokens: 10, completionTokens: 10 },
+			warnings: [],
+		});
+
+		const result = await writeFinalReport({
+			env: mockEnv,
+			prompt: "test prompt",
+			learnings: [],
+			visitedUrls: ["url1.com"],
+		});
+
+		expect(result).toContain("Report with no learnings.");
+		expect(result).toContain("## Sources");
+	});
+
+	test("should handle empty visitedUrls", async () => {
+		const mockPrimaryModel = { id: "gemini-1.5-flash-test-report" };
+		const mockSuccessText = "Report content.";
+
+		(getModelThinking as vi.Mock).mockReturnValue(mockPrimaryModel);
+		(generateText as vi.Mock).mockResolvedValue({
+			text: mockSuccessText,
+			toolCalls: [],
+			toolResults: [],
+			finishReason: "stop",
+			usage: { promptTokens: 10, completionTokens: 10 },
+			warnings: [],
+		});
+
+		const result = await writeFinalReport({
+			env: mockEnv,
+			prompt: "test prompt",
+			learnings: ["learning"],
+			visitedUrls: [],
+		});
+
+		expect(result).toContain("Report content.");
+		// Should still have sources section but empty
+		expect(result).toContain("## Sources");
 	});
 });

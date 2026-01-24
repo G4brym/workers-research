@@ -7,268 +7,316 @@ import { generateObject, generateText } from "ai";
 import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env } from "./bindings";
-import { RESEARCH_PROMPT } from "./prompts";
-import type { ResearchType } from "./types";
-import { getFallbackModel, getModel, getModelThinking } from "./utils";
+import { config } from "./config";
 import {
-	type ResearchBrowser,
-	type SearchResult,
-	getBrowser,
-	webSearch,
-} from "./webSearch";
+	logLearningsExtracted,
+	logRateLimitRetry,
+	logReportGeneration,
+	logResearchComplete,
+	logResearchError,
+	logResearchStart,
+	logSearchComplete,
+	logSearchError,
+	logSearchStart,
+	logger,
+} from "./logger";
+import {
+	FINAL_REPORT_PROMPT,
+	LEARNING_EXTRACTION_PROMPT,
+	RESEARCH_PROMPT,
+} from "./prompts";
+import { storeReportWithR2Fallback } from "./storage";
+import type {
+	ConfidenceLevel,
+	LearningWithSource,
+	ResearchType,
+} from "./types";
+import { getFallbackModel, getModel, getModelThinking } from "./utils";
+import { type ResearchBrowser, getBrowser, webSearch } from "./webSearch";
 
-async function deepResearch({
-	step,
-	env,
-	browser,
-	query,
-	breadth,
-	depth,
-	learnings: initialLearningsParam, // Renamed to avoid conflict
-	visitedUrls,
-	qb,
-	researchId,
-}: {
+// ============================================
+// Types for unified research
+// ============================================
+
+interface SearchStrategy {
+	name: "web" | "autorag";
+	search: (query: string) => Promise<SearchStrategyResult | null>;
+	formatUrls: (result: SearchStrategyResult) => string[];
+	formatContent: (result: SearchStrategyResult) => string[];
+}
+
+interface SearchStrategyResult {
+	data: unknown[];
+}
+
+interface DeepResearchParams {
 	step: WorkflowStep;
 	env: Env;
-	browser: ResearchBrowser;
+	strategy: SearchStrategy;
 	query: string;
 	breadth: number;
 	depth: number;
-	learnings: string[]; // Keep this as string[]
+	learnings: string[];
 	visitedUrls: string[];
 	qb: D1QB;
 	researchId: string;
-}) {
-	const serpQueries = await step.do("generate_serp_queries", () =>
-		generateSerpQueries({
-			env,
-			query,
-			learnings: initialLearningsParam,
-			numQueries: breadth,
-		}),
+}
+
+interface DeepResearchResult {
+	learnings: string[];
+	visitedUrls: string[];
+}
+
+// ============================================
+// Unified Deep Research Function
+// ============================================
+
+async function deepResearch(
+	params: DeepResearchParams,
+): Promise<DeepResearchResult> {
+	const {
+		step,
+		env,
+		strategy,
+		query,
+		breadth,
+		depth,
+		learnings: initialLearnings,
+		visitedUrls,
+		qb,
+		researchId,
+	} = params;
+
+	const timer = logger.startTimer();
+
+	const serpQueries = await step.do(
+		`generate_serp_queries_${strategy.name}`,
+		() =>
+			generateSerpQueries({
+				env,
+				query,
+				learnings: initialLearnings,
+				numQueries: breadth,
+			}),
 	);
 
-	let allLearnings = [...initialLearningsParam]; // Use the passed learnings
+	let allLearnings = [...initialLearnings];
 	let allUrls = [...visitedUrls];
 
 	for (const serpQuery of serpQueries) {
 		await addResearchStatusHistoryEntry(
 			qb,
 			researchId,
-			`Executing web search for query: ${serpQuery.query}`,
+			`Executing ${strategy.name} search for query: ${serpQuery.query}`,
 		);
-		const result = await step.do("perform_web_search", async () => {
-			try {
-				return await webSearch(
-					await browser.getActiveBrowser(),
-					serpQuery.query,
-					5,
-					async (urlToLog: string) =>
+
+		logSearchStart(researchId, serpQuery.query, strategy.name);
+		const searchTimer = logger.startTimer();
+
+		const result = await step.do(
+			`perform_${strategy.name}_search`,
+			async () => {
+				try {
+					return await strategy.search(serpQuery.query);
+				} catch (e) {
+					const error = e instanceof Error ? e : new Error(String(e));
+					logSearchError(researchId, strategy.name, serpQuery.query, error);
+					await addResearchStatusHistoryEntry(
+						qb,
+						researchId,
+						`Error during ${strategy.name} search for query ${serpQuery.query}: ${error.message}`,
+					);
+					return null;
+				}
+			},
+		);
+
+		if (!result || result.data.length === 0) {
+			continue;
+		}
+
+		const newUrls = strategy.formatUrls(result);
+		logSearchComplete(researchId, strategy.name, newUrls.length, searchTimer());
+
+		const newBreadth = Math.ceil(breadth / 2);
+		const newDepth = depth - 1;
+
+		const { learnings: newLearnings, followUpQuestions } = await step.do(
+			`extract_learnings_${strategy.name}`,
+			async () => {
+				return await processSerpResult({
+					env,
+					query: serpQuery.query,
+					result: strategy.formatContent(result),
+					numFollowUpQuestions: newBreadth,
+					sourceUrls: newUrls,
+				});
+			},
+		);
+
+		logLearningsExtracted(researchId, newLearnings.length);
+		allLearnings = [...allLearnings, ...newLearnings];
+		allUrls = [...allUrls, ...newUrls];
+
+		if (newDepth > 0) {
+			const nextQuery = `
+				Previous research goal: ${serpQuery.researchGoal}
+				Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
+			`.trim();
+
+			const recursiveResult = await deepResearch({
+				...params,
+				query: nextQuery,
+				breadth: newBreadth,
+				depth: newDepth,
+				learnings: allLearnings,
+				visitedUrls: allUrls,
+			});
+
+			allLearnings = [...allLearnings, ...recursiveResult.learnings];
+			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
+		}
+	}
+
+	logger.debug(`Deep research iteration completed`, {
+		researchId,
+		durationMs: timer(),
+		learningsCount: allLearnings.length,
+	});
+
+	return { learnings: allLearnings, visitedUrls: allUrls };
+}
+
+// ============================================
+// Search Strategy Factories
+// ============================================
+
+function createWebSearchStrategy(
+	browser: ResearchBrowser,
+	qb: D1QB,
+	researchId: string,
+	cache?: KVNamespace,
+	excludedDomains?: string[],
+): SearchStrategy {
+	return {
+		name: "web",
+		search: async (query: string) => {
+			const results = await webSearch(
+				await browser.getActiveBrowser(),
+				query,
+				config.webSearch.resultsLimit,
+				{
+					logCrawlUrl: async (url: string) => {
 						await addResearchStatusHistoryEntry(
 							qb,
 							researchId,
-							`Crawling URL: ${urlToLog}`,
-						),
-				);
-			} catch (e: any) {
-				console.error(e);
-				await addResearchStatusHistoryEntry(
-					qb,
-					researchId,
-					`Error during web search for query ${serpQuery.query}: ${e.message}`,
-				);
-				return null;
-			}
-		});
+							`Crawling URL: ${url}`,
+						);
+					},
+					cache,
+				},
+			);
 
-		if (!result) {
-			// web search provably failed, no learnings to get
-			continue;
-		}
-
-		const newUrls = result.map((item) => item.url).filter(Boolean);
-		const newBreadth = Math.ceil(breadth / 2);
-		const newDepth = depth - 1;
-
-		const { learnings: newLearnings, followUpQuestions } = await step.do(
-			"extract_learnings_from_search",
-			async () => {
-				return await processSerpResult({
-					env,
-					query: serpQuery.query,
-					result: result.map((item) => item.markdown),
-					numFollowUpQuestions: newBreadth,
+			// Filter out excluded domains
+			if (excludedDomains && excludedDomains.length > 0) {
+				const filtered = results.filter((result) => {
+					try {
+						const domain = new URL(result.url).hostname.toLowerCase();
+						return !excludedDomains.some(
+							(excluded) =>
+								domain === excluded || domain.endsWith(`.${excluded}`),
+						);
+					} catch {
+						return true; // Keep if URL is malformed
+					}
 				});
-			},
-		);
+				return { data: filtered };
+			}
 
-		allLearnings = [...allLearnings, ...newLearnings];
-		allUrls = [...allUrls, ...newUrls];
-
-		if (newDepth > 0) {
-			const nextQuery = `
-          Previous research goal: ${serpQuery.researchGoal}
-          Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
-        `.trim();
-			const recursiveResult = await deepResearch({
-				step,
-				env,
-				browser,
-				query: nextQuery,
-				breadth: newBreadth,
-				depth: newDepth,
-				learnings: allLearnings,
-				visitedUrls: allUrls,
-				qb,
-				researchId,
-			});
-			allLearnings = [...allLearnings, ...recursiveResult.learnings];
-			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
-		}
-	}
-
-	return { learnings: allLearnings, visitedUrls: allUrls };
+			return { data: results };
+		},
+		formatUrls: (result) => {
+			const data = result.data as Array<{ url: string }>;
+			return data.map((item) => item.url).filter(Boolean);
+		},
+		formatContent: (result) => {
+			const data = result.data as Array<{ markdown: string }>;
+			return data.map((item) => item.markdown);
+		},
+	};
 }
 
-async function deepResearchAutoRAG({
-	step,
-	env,
-	autorag,
-	query,
-	breadth,
-	depth,
-	learnings: initialLearningsParam, // Renamed to avoid conflict
-	visitedUrls,
-	qb,
-	researchId,
-}: {
-	step: WorkflowStep;
-	env: Env;
-	autorag: AutoRAG;
-	query: string;
-	breadth: number;
-	depth: number;
-	learnings: string[]; // Keep this as string[]
-	visitedUrls: string[];
-	qb: D1QB;
-	researchId: string;
-}) {
-	const serpQueries = await step.do("generate_serp_queries", () =>
-		generateSerpQueries({
-			env,
-			query,
-			learnings: initialLearningsParam,
-			numQueries: breadth,
-		}),
-	);
-
-	let allLearnings = [...initialLearningsParam]; // Use the passed learnings
-	let allUrls = [...visitedUrls];
-
-	for (const serpQuery of serpQueries) {
-		await addResearchStatusHistoryEntry(
-			qb,
-			researchId,
-			`Executing AutoRAG search for query: ${serpQuery.query}`,
-		);
-		const result = await step.do("perform_autorag_search", async () => {
-			try {
-				return await autorag.search({
-					query: serpQuery.query,
-					max_num_results: 5,
-				});
-			} catch (e: any) {
-				console.error(e);
-				await addResearchStatusHistoryEntry(
-					qb,
-					researchId,
-					`Error during AutoRAG search for query ${serpQuery.query}: ${e.message}`,
-				);
-				return null;
-			}
-		});
-
-		if (result.data.length === 0) {
-			// web search provably failed, no learnings to get
-			continue;
-		}
-
-		const newUrls = result.data
-			.map((item) => `AutoRAG: ${item.filename}`)
-			.filter(Boolean);
-		const newBreadth = Math.ceil(breadth / 2);
-		const newDepth = depth - 1;
-
-		const { learnings: newLearnings, followUpQuestions } = await step.do(
-			"extract_learnings_from_search",
-			async () => {
-				return await processSerpResult({
-					env,
-					query: serpQuery.query,
-					result: result.data.map((item) =>
-						item.content.map((c) => c.text).join("\n\n-----\n\n"),
-					),
-					numFollowUpQuestions: newBreadth,
-				});
-			},
-		);
-
-		allLearnings = [...allLearnings, ...newLearnings];
-		allUrls = [...allUrls, ...newUrls];
-
-		if (newDepth > 0) {
-			const nextQuery = `
-          Previous research goal: ${serpQuery.researchGoal}
-          Follow-up research directions: ${followUpQuestions.map((q) => `\n${q}`).join("")}
-        `.trim();
-			const recursiveResult = await deepResearchAutoRAG({
-				step,
-				env,
-				autorag,
-				query: nextQuery,
-				breadth: newBreadth,
-				depth: newDepth,
-				learnings: allLearnings,
-				visitedUrls: allUrls,
-				qb,
-				researchId,
+function createAutoRAGSearchStrategy(autorag: AutoRAG): SearchStrategy {
+	return {
+		name: "autorag",
+		search: async (query: string) => {
+			const result = await autorag.search({
+				query,
+				max_num_results: config.webSearch.resultsLimit,
 			});
-			allLearnings = [...allLearnings, ...recursiveResult.learnings];
-			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
-		}
-	}
-
-	return { learnings: allLearnings, visitedUrls: allUrls };
+			return { data: result.data };
+		},
+		formatUrls: (result) => {
+			const data = result.data as Array<{ filename: string }>;
+			return data.map((item) => `AutoRAG: ${item.filename}`).filter(Boolean);
+		},
+		formatContent: (result) => {
+			const data = result.data as Array<{ content: Array<{ text: string }> }>;
+			return data.map((item) =>
+				item.content.map((c) => c.text).join("\n\n-----\n\n"),
+			);
+		},
+	};
 }
+
+// ============================================
+// AI Processing Functions
+// ============================================
 
 export async function processSerpResult({
 	env,
 	query,
 	result,
-	numLearnings = 5,
-	numFollowUpQuestions = 5,
+	numLearnings = config.research.maxQuestions,
+	numFollowUpQuestions = config.research.maxQuestions,
+	sourceUrls = [],
 }: {
 	env: Env;
 	query: string;
 	result: string[];
 	numLearnings?: number;
 	numFollowUpQuestions?: number;
-}) {
+	sourceUrls?: string[];
+}): Promise<{ learnings: string[]; followUpQuestions: string[] }> {
 	const contents = result.filter(Boolean);
 
 	const model = getModel(env);
 	const schema = z.object({
 		learnings: z
-			.array(z.string())
-			.describe(`List of learnings (max ${numLearnings})`),
+			.array(
+				z.object({
+					text: z.string().describe("The learning content"),
+					confidence: z
+						.enum(["HIGH", "MEDIUM", "LOW"])
+						.describe("Confidence level based on source quality"),
+					sourceIndex: z
+						.number()
+						.optional()
+						.describe("Index of the source content (0-based)"),
+				}),
+			)
+			.describe(`List of learnings with confidence (max ${numLearnings})`),
 		followUpQuestions: z
 			.array(z.string())
 			.describe(`List of follow-up questions (max ${numFollowUpQuestions})`),
 	});
-	const system = RESEARCH_PROMPT();
-	const prompt = `Given the SERP contents for query <query>${query}</query>, extract up to ${numLearnings} concise and unique learnings. Include entities such as people, places, companies, etc., and also provide up to ${numFollowUpQuestions} follow-up questions to extend the research.\n\n<contents>${contents
-		.map((content) => `<content>\n${content}\n</content>`)
+	const system = LEARNING_EXTRACTION_PROMPT();
+	const prompt = `Given the SERP contents for query <query>${query}</query>, extract up to ${numLearnings} concise and unique learnings with confidence levels. Include entities such as people, places, companies, etc., and also provide up to ${numFollowUpQuestions} follow-up questions to extend the research.
+
+Source URLs for reference: ${sourceUrls.map((url, i) => `[${i}] ${url}`).join(", ")}
+
+<contents>${contents
+		.map((content, i) => `<content index="${i}">\n${content}\n</content>`)
 		.join("\n")}</contents>`;
 
 	try {
@@ -279,16 +327,23 @@ export async function processSerpResult({
 			prompt,
 			schema,
 		});
-		return res.object;
-	} catch (error: any) {
-		if (
-			error.message?.includes("exceeded your current quota") ||
-			error.lastError?.includes("exceeded your current quota")
-		) {
-			console.warn(
-				`Rate limit error in processSerpResult for query "${query}". Retrying with fallback model.`,
-				error,
-			);
+
+		// Format learnings with confidence indicators for backward compatibility
+		const formattedLearnings = res.object.learnings.map((l) => {
+			const sourceInfo =
+				l.sourceIndex !== undefined && sourceUrls[l.sourceIndex]
+					? ` [Source: ${sourceUrls[l.sourceIndex]}]`
+					: "";
+			return `[${l.confidence}] ${l.text}${sourceInfo}`;
+		});
+
+		return {
+			learnings: formattedLearnings,
+			followUpQuestions: res.object.followUpQuestions,
+		};
+	} catch (error) {
+		if (isRateLimitError(error)) {
+			logRateLimitRetry("processSerpResult", query);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateObject({
 				model: fallbackModel,
@@ -297,23 +352,77 @@ export async function processSerpResult({
 				prompt,
 				schema,
 			});
-			return res.object;
+
+			const formattedLearnings = res.object.learnings.map((l) => {
+				const sourceInfo =
+					l.sourceIndex !== undefined && sourceUrls[l.sourceIndex]
+						? ` [Source: ${sourceUrls[l.sourceIndex]}]`
+						: "";
+				return `[${l.confidence}] ${l.text}${sourceInfo}`;
+			});
+
+			return {
+				learnings: formattedLearnings,
+				followUpQuestions: res.object.followUpQuestions,
+			};
 		}
 		throw error;
 	}
 }
 
+// Learning deduplication - removes semantically similar learnings
+export function deduplicateLearnings(learnings: string[]): string[] {
+	const seen = new Set<string>();
+	const result: string[] = [];
+
+	for (const learning of learnings) {
+		// Normalize the learning for comparison (lowercase, remove extra whitespace)
+		const normalized = learning
+			.toLowerCase()
+			.replace(/\[(?:high|medium|low)\]\s*/gi, "") // Remove confidence tags
+			.replace(/\[source:[^\]]*\]/gi, "") // Remove source tags
+			.replace(/\s+/g, " ")
+			.trim();
+
+		// Simple word-based similarity check
+		const words = new Set(normalized.split(" ").filter((w) => w.length > 3));
+		let isDuplicate = false;
+
+		for (const seenItem of seen) {
+			const seenWords = new Set(
+				seenItem.split(" ").filter((w) => w.length > 3),
+			);
+			const intersection = [...words].filter((w) => seenWords.has(w));
+			const similarity =
+				(2 * intersection.length) / (words.size + seenWords.size);
+
+			// If more than 70% similar, consider it a duplicate
+			if (similarity > 0.7) {
+				isDuplicate = true;
+				break;
+			}
+		}
+
+		if (!isDuplicate) {
+			seen.add(normalized);
+			result.push(learning);
+		}
+	}
+
+	return result;
+}
+
 export async function generateSerpQueries({
 	env,
 	query,
-	numQueries = 5,
+	numQueries = config.research.maxQuestions,
 	learnings,
 }: {
 	env: Env;
 	query: string;
 	numQueries?: number;
 	learnings?: string[];
-}) {
+}): Promise<Array<{ query: string; researchGoal: string }>> {
 	const model = getModel(env);
 	const system = RESEARCH_PROMPT();
 	const prompt = `Generate up to ${numQueries} unique SERP queries for the following prompt: <prompt>${query}</prompt>${
@@ -334,6 +443,8 @@ export async function generateSerpQueries({
 			.describe(`List of SERP queries (max ${numQueries})`),
 	});
 
+	type QueryResult = { query: string; researchGoal: string };
+
 	try {
 		const res = await generateObject({
 			model,
@@ -341,16 +452,10 @@ export async function generateSerpQueries({
 			prompt,
 			schema,
 		});
-		return res.object.queries.slice(0, numQueries);
-	} catch (error: any) {
-		if (
-			error.message?.includes("exceeded your current quota") ||
-			error.lastError?.includes("exceeded your current quota")
-		) {
-			console.warn(
-				`Rate limit error in generateSerpQueries for query "${query}". Retrying with fallback model.`,
-				error,
-			);
+		return res.object.queries.slice(0, numQueries) as QueryResult[];
+	} catch (error) {
+		if (isRateLimitError(error)) {
+			logRateLimitRetry("generateSerpQueries", query);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateObject({
 				model: fallbackModel,
@@ -358,7 +463,7 @@ export async function generateSerpQueries({
 				prompt,
 				schema,
 			});
-			return res.object.queries.slice(0, numQueries);
+			return res.object.queries.slice(0, numQueries) as QueryResult[];
 		}
 		throw error;
 	}
@@ -374,14 +479,29 @@ export async function writeFinalReport({
 	prompt: string;
 	learnings: string[];
 	visitedUrls: string[];
-}) {
-	const learningsString = learnings
+}): Promise<string> {
+	// Deduplicate learnings before generating the report
+	const uniqueLearnings = deduplicateLearnings(learnings);
+	logger.info("Learnings deduplicated", {
+		original: learnings.length,
+		deduplicated: uniqueLearnings.length,
+	});
+
+	const learningsString = uniqueLearnings
 		.map((l) => `<learning>\n${l}\n</learning>`)
 		.join("\n");
 
 	const model = getModelThinking(env);
-	const system = RESEARCH_PROMPT();
-	const generationPrompt = `Using the prompt <prompt>${prompt}</prompt>, write a detailed final report (3+ pages) that includes all the following learnings:\n\n<learnings>\n${learningsString}\n</learnings>`;
+	const system = FINAL_REPORT_PROMPT();
+	const generationPrompt = `Research Query: <prompt>${prompt}</prompt>
+
+Write a comprehensive research report based on the following learnings. Pay attention to confidence levels [HIGH/MEDIUM/LOW] when presenting findings.
+
+<learnings>
+${learningsString}
+</learnings>
+
+Generate the report following the structure outlined in your system prompt.`;
 
 	let text: string;
 	try {
@@ -391,15 +511,9 @@ export async function writeFinalReport({
 			prompt: generationPrompt,
 		});
 		text = res.text;
-	} catch (error: any) {
-		if (
-			error.message?.includes("exceeded your current quota") ||
-			error.lastError?.includes("exceeded your current quota")
-		) {
-			console.warn(
-				`Rate limit error in writeFinalReport for prompt "${prompt}". Retrying with fallback model.`,
-				error,
-			);
+	} catch (error) {
+		if (isRateLimitError(error)) {
+			logRateLimitRetry("writeFinalReport", prompt);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateText({
 				model: fallbackModel,
@@ -412,22 +526,34 @@ export async function writeFinalReport({
 		}
 	}
 
-	const parsedSources = [];
-	for (const url of visitedUrls) {
-		if (!parsedSources.includes(url)) {
-			parsedSources.push(url);
-		}
-	}
-
+	// Deduplicate sources
+	const parsedSources = [...new Set(visitedUrls)];
 	const urlsSection = `\n\n\n\n## Sources\n\n${parsedSources.map((url) => `- ${url}`).join("\n")}`;
+
 	return text + urlsSection;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+function isRateLimitError(error: unknown): boolean {
+	if (error instanceof Error) {
+		const message = error.message || "";
+		const lastError = (error as { lastError?: string }).lastError || "";
+		return (
+			message.includes("exceeded your current quota") ||
+			lastError.includes("exceeded your current quota")
+		);
+	}
+	return false;
 }
 
 async function addResearchStatusHistoryEntry(
 	db: D1QB,
 	researchId: string,
 	statusText: string,
-) {
+): Promise<void> {
 	try {
 		await db
 			.insert({
@@ -436,14 +562,22 @@ async function addResearchStatusHistoryEntry(
 					id: crypto.randomUUID(),
 					research_id: researchId,
 					status_text: statusText,
-					// timestamp is default CURRENT_TIMESTAMP
 				},
 			})
 			.execute();
 	} catch (e) {
-		console.error("Failed to insert research status history entry:", e);
+		const error = e instanceof Error ? e : new Error(String(e));
+		logger.error(
+			"Failed to insert research status history entry",
+			{ researchId },
+			error,
+		);
 	}
 }
+
+// ============================================
+// Main Workflow Class
+// ============================================
 
 export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 	async run(event: WorkflowEvent<ResearchType>, step: WorkflowStep) {
@@ -452,9 +586,13 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 		const { query, questions, breadth, depth, id, initialLearnings } =
 			event.payload;
 
+		const parsedBreadth = Number.parseInt(breadth);
+		const parsedDepth = Number.parseInt(depth);
+
+		logResearchStart(id, query, parsedDepth, parsedBreadth);
+
 		try {
 			await addResearchStatusHistoryEntry(qb, id, "Workflow run initiated.");
-			console.log("Starting workflow");
 
 			const fullQuery = `Initial Query: ${query}\nFollowup Q&A:\n${questions
 				.map((q) => `Q: ${q.question}\nA: ${q.answer}`)
@@ -467,20 +605,92 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 
 			const browser = await getBrowser(this.env);
 
-			let learnings = [];
-			let visitedUrls = [];
+			let learnings: string[] = [];
+			let visitedUrls: string[] = [];
 
+			// Crawl user-provided source URLs first
+			const sourceUrls = event.payload.source_urls ?? [];
+			if (sourceUrls.length > 0) {
+				logger.info("Crawling user-provided source URLs", {
+					researchId: id,
+					urlCount: sourceUrls.length,
+				});
+				await addResearchStatusHistoryEntry(
+					qb,
+					id,
+					`Processing ${sourceUrls.length} user-provided source URL(s)`,
+				);
+
+				const activeBrowser = await browser.getActiveBrowser();
+				const sourceResults = await step.do("crawl_source_urls", async () => {
+					const results: Array<{ url: string; markdown: string }> = [];
+					for (const url of sourceUrls) {
+						try {
+							await addResearchStatusHistoryEntry(
+								qb,
+								id,
+								`Crawling source URL: ${url}`,
+							);
+							const searchResult = await webSearch(activeBrowser, url, 1, {
+								cache: this.env.CACHE,
+							});
+							if (searchResult.length > 0) {
+								results.push({
+									url: searchResult[0].url,
+									markdown: searchResult[0].markdown,
+								});
+							}
+						} catch (err) {
+							logger.warn("Failed to crawl source URL", { url, error: err });
+						}
+					}
+					return results;
+				});
+
+				// Process learnings from source URLs
+				if (sourceResults.length > 0) {
+					const sourceContent = sourceResults.map((r) => r.markdown);
+					const sourceUrlsList = sourceResults.map((r) => r.url);
+
+					const sourceLearnings = await step.do(
+						"process_source_learnings",
+						async () => {
+							const result = await processSerpResult({
+								env: this.env,
+								query: fullQuery,
+								result: sourceContent,
+								sourceUrls: sourceUrlsList,
+							});
+							return result.learnings;
+						},
+					);
+
+					learnings = [...learnings, ...sourceLearnings];
+					visitedUrls = [...visitedUrls, ...sourceUrlsList];
+				}
+			}
+
+			// Web research
 			if (event.payload.browse_internet) {
-				console.log("Starting research on the internet...");
+				logger.info("Starting web research", { researchId: id });
+				const excludedDomains = event.payload.excluded_domains ?? [];
+				const webStrategy = createWebSearchStrategy(
+					browser,
+					qb,
+					id,
+					this.env.CACHE,
+					excludedDomains,
+				);
+
 				const researchResult = await deepResearch({
 					step,
 					env: this.env,
-					browser,
+					strategy: webStrategy,
 					query: fullQuery,
-					breadth: Number.parseInt(breadth),
-					depth: Number.parseInt(depth),
-					learnings: processedLearnings,
-					visitedUrls: [],
+					breadth: parsedBreadth,
+					depth: parsedDepth,
+					learnings: [...processedLearnings, ...learnings],
+					visitedUrls,
 					qb,
 					researchId: id,
 				});
@@ -489,17 +699,23 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				visitedUrls = [...visitedUrls, ...researchResult.visitedUrls];
 			}
 
+			// AutoRAG research
 			if (event.payload.autorag_id) {
-				console.log(
-					`Starting research on the AutoRAG (${event.payload.autorag_id})...`,
+				logger.info("Starting AutoRAG research", {
+					researchId: id,
+					autoragId: event.payload.autorag_id,
+				});
+				const autoragStrategy = createAutoRAGSearchStrategy(
+					this.env.AI.autorag(event.payload.autorag_id),
 				);
-				const researchResult = await deepResearchAutoRAG({
+
+				const researchResult = await deepResearch({
 					step,
 					env: this.env,
-					autorag: this.env.AI.autorag(event.payload.autorag_id),
+					strategy: autoragStrategy,
 					query: fullQuery,
-					breadth: Number.parseInt(breadth),
-					depth: Number.parseInt(depth),
+					breadth: parsedBreadth,
+					depth: parsedDepth,
 					learnings: processedLearnings,
 					visitedUrls: [],
 					qb,
@@ -510,7 +726,8 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				visitedUrls = [...visitedUrls, ...researchResult.visitedUrls];
 			}
 
-			console.log("Generating report");
+			// Generate final report
+			logReportGeneration(id, learnings.length);
 			const report = await step.do("generate_final_report", () =>
 				writeFinalReport({
 					env: this.env,
@@ -519,43 +736,62 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 					visitedUrls: visitedUrls,
 				}),
 			);
+
 			await addResearchStatusHistoryEntry(
 				qb,
 				id,
 				"Finalizing report and completing workflow.",
 			);
 
+			const duration = Date.now() - event.payload.start_ms;
+
+			// Store large reports in R2, smaller ones in D1
+			const { dbContent, storedInR2 } = await storeReportWithR2Fallback(
+				this.env.REPORTS_BUCKET,
+				id,
+				report,
+			);
+
+			if (storedInR2) {
+				logger.info("Report stored in R2", { researchId: id });
+			}
+
 			await qb
 				.update({
 					tableName: "researches",
 					data: {
-						status: 2,
-						result: report,
-						duration: Date.now() - event.payload.start_ms,
+						status: config.status.completed,
+						result: dbContent,
+						duration,
 					},
 					where: { conditions: "id = ?", params: [id] },
 				})
 				.execute();
 
-			console.log("Workflow finished!");
+			logResearchComplete(id, duration, learnings.length);
+
 			return {
-				learnings: learnings,
-				visitedUrls: visitedUrls,
+				learnings,
+				visitedUrls,
 				report,
 			};
-		} catch (error: any) {
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error));
+			logResearchError(id, err);
+
 			await addResearchStatusHistoryEntry(
 				qb,
 				id,
-				`Workflow failed: ${error.message}`,
+				`Workflow failed: ${err.message}`,
 			);
+
 			await qb
 				.update({
 					tableName: "researches",
 					data: {
-						status: 3,
+						status: config.status.failed,
 						duration: Date.now() - event.payload.start_ms,
-						result: `Error: ${error.message}\n\n${error.stack ?? ""}`,
+						result: `Error: ${err.message}\n\n${err.stack ?? ""}`,
 					},
 					where: { conditions: "id = ?", params: [id] },
 				})

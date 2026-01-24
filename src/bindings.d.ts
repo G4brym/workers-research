@@ -10,10 +10,13 @@ export type Env = {
 	AI_GATEWAY_API_KEY?: string;
 	BROWSER: Fetcher;
 	AI: Ai;
+	CACHE?: KVNamespace;
+	REPORTS_BUCKET?: R2Bucket;
 };
 
 export type Variables = {
 	user?: string;
+	csrfToken?: string;
 };
 
 export type AppContext = Context<{ Bindings: Env; Variables: Variables }>;
