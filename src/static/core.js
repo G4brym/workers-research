@@ -94,10 +94,12 @@ function loadNewResearch() {
 					const existingFields = finalForm.querySelectorAll(
 						'input[name^="question_"], input[name^="answer_"]',
 					);
-					existingFields.forEach((field) => field.remove());
+					existingFields.forEach((field) => {
+						field.remove();
+					});
 
 					// Add questions and answers
-					questions.forEach((input, index) => {
+					questions.forEach((input, _index) => {
 						const questionText = input
 							.closest(".question-item")
 							.querySelector(".question-text").textContent;

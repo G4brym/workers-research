@@ -9,6 +9,7 @@ import { z } from "zod";
 import type { Env } from "./bindings";
 import { config } from "./config";
 import {
+	logger,
 	logLearningsExtracted,
 	logRateLimitRetry,
 	logReportGeneration,
@@ -18,7 +19,6 @@ import {
 	logSearchComplete,
 	logSearchError,
 	logSearchStart,
-	logger,
 } from "./logger";
 import {
 	FINAL_REPORT_PROMPT,
@@ -26,13 +26,9 @@ import {
 	RESEARCH_PROMPT,
 } from "./prompts";
 import { storeReportWithR2Fallback } from "./storage";
-import type {
-	ConfidenceLevel,
-	LearningWithSource,
-	ResearchType,
-} from "./types";
+import type { ResearchType } from "./types";
 import { getFallbackModel, getModel, getModelThinking } from "./utils";
-import { type ResearchBrowser, getBrowser, webSearch } from "./webSearch";
+import { getBrowser, type ResearchBrowser, webSearch } from "./webSearch";
 
 // ============================================
 // Types for unified research
@@ -528,9 +524,14 @@ Generate the report following the structure outlined in your system prompt.`;
 
 	// Deduplicate sources
 	const parsedSources = [...new Set(visitedUrls)];
-	const urlsSection = `\n\n\n\n## Sources\n\n${parsedSources.map((url) => `- ${url}`).join("\n")}`;
 
-	return text + urlsSection;
+	// Only append sources section if there are actual sources
+	if (parsedSources.length > 0) {
+		const urlsSection = `\n\n\n\n## Sources\n\n${parsedSources.map((url) => `- ${url}`).join("\n")}`;
+		return text + urlsSection;
+	}
+
+	return text;
 }
 
 // ============================================
@@ -547,6 +548,57 @@ function isRateLimitError(error: unknown): boolean {
 		);
 	}
 	return false;
+}
+
+/**
+ * Format error messages for user display
+ */
+function formatErrorForUser(error: Error): string {
+	const message = error.message || "";
+
+	// Check if it's a quota error
+	if (message.includes("exceeded your current quota")) {
+		// Extract retry time if available
+		const retryMatch = message.match(/Please retry in ([\d.]+)s/);
+		const retryTime = retryMatch ? retryMatch[1] : null;
+
+		// Extract model name if available
+		const modelMatch = message.match(/model:\s*(\S+)/);
+		const modelName = modelMatch ? modelMatch[1] : "Gemini API";
+
+		return `# API Quota Exceeded
+
+**The research could not be completed due to API quota limits.**
+
+## What happened?
+The Google Gemini API quota has been exceeded. This typically happens when:
+- You've reached the free tier request limit
+- Too many requests were made in a short period
+- The daily token limit has been reached
+
+## What you can do:
+1. **Wait and retry**: ${retryTime ? `You can retry in about ${Math.ceil(Number.parseFloat(retryTime))} seconds.` : "Wait a few minutes and try again."}
+2. **Check your API usage**: Visit [Google AI Studio](https://ai.dev/rate-limit) to monitor your current usage
+3. **Upgrade your plan**: Consider upgrading to a paid tier for higher limits at [Google AI Pricing](https://ai.google.dev/pricing)
+4. **Reduce research scope**: Try using lower depth/breadth settings to reduce API calls
+
+## Technical Details
+- **Model**: ${modelName}
+- **Error Type**: Quota Limit Exceeded
+
+For more information about rate limits, visit the [Gemini API documentation](https://ai.google.dev/gemini-api/docs/rate-limits).`;
+	}
+
+	// For other errors, return a formatted version
+	return `# Research Error
+
+An error occurred during the research process:
+
+\`\`\`
+${message}
+\`\`\`
+
+${error.stack ? `\n## Stack Trace\n\`\`\`\n${error.stack}\n\`\`\`` : ""}`;
 }
 
 async function addResearchStatusHistoryEntry(
@@ -586,8 +638,8 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 		const { query, questions, breadth, depth, id, initialLearnings } =
 			event.payload;
 
-		const parsedBreadth = Number.parseInt(breadth);
-		const parsedDepth = Number.parseInt(depth);
+		const parsedBreadth = Number.parseInt(breadth, 10);
+		const parsedDepth = Number.parseInt(depth, 10);
 
 		logResearchStart(id, query, parsedDepth, parsedBreadth);
 
@@ -779,10 +831,13 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 			const err = error instanceof Error ? error : new Error(String(error));
 			logResearchError(id, err);
 
+			// Create user-friendly error message
+			const userFriendlyError = formatErrorForUser(err);
+
 			await addResearchStatusHistoryEntry(
 				qb,
 				id,
-				`Workflow failed: ${err.message}`,
+				`Workflow failed: ${err.message.substring(0, 200)}${err.message.length > 200 ? "..." : ""}`,
 			);
 
 			await qb
@@ -791,7 +846,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 					data: {
 						status: config.status.failed,
 						duration: Date.now() - event.payload.start_ms,
-						result: `Error: ${err.message}\n\n${err.stack ?? ""}`,
+						result: userFriendlyError,
 					},
 					where: { conditions: "id = ?", params: [id] },
 				})

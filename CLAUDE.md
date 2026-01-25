@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Workers-Research is a serverless AI-powered deep research agent built on Cloudflare Workers with Google Gemini 2.5. It provides automated research capabilities through a web dashboard, allowing users to conduct in-depth research on any topic with configurable depth and breadth parameters.
+Workers-Research is a serverless AI-powered deep research agent built on Cloudflare Workers with Google Gemini 2.0. It provides automated research capabilities through a web dashboard, allowing users to conduct in-depth research on any topic with configurable depth and breadth parameters.
 
 ## Commands
 
@@ -49,7 +49,7 @@ Workers-Research is a serverless AI-powered deep research agent built on Cloudfl
 - **Runtime:** Cloudflare Workers + Workflows
 - **Database:** Cloudflare D1 (SQLite)
 - **Web Framework:** Hono with JSX (server-rendered)
-- **LLM:** Google Gemini 2.5 Flash Preview (fallback: Gemini 2.0 Flash)
+- **LLM:** Google Gemini 2.0 Flash Experimental (fallback: Gemini 2.0 Flash)
 - **Web Crawling:** Cloudflare Browser Rendering + Puppeteer
 - **Styling:** Tailwind CSS
 - **Validation:** Zod schemas

@@ -1,4 +1,4 @@
-import { type Renderer, marked } from "marked";
+import { marked, type Renderer } from "marked";
 import sanitizeHtml from "sanitize-html";
 
 // Helper to generate slug for heading IDs
@@ -376,4 +376,350 @@ export function renderMarkdownReportContent(
 
 	// Return TOC + content
 	return tocHtml + sanitizedContent;
+}
+
+/**
+ * Generate a beautifully styled PDF document from markdown content
+ * @param markdownContent - The markdown content to render
+ * @param metadata - Optional metadata (title, date, etc.)
+ */
+export function renderPdfDocument(
+	markdownContent: string,
+	metadata?: {
+		title?: string;
+		date?: string;
+		query?: string;
+	},
+): string {
+	const htmlContent = renderMarkdownReportContent(markdownContent, {
+		includeToc: true,
+	});
+
+	const title = metadata?.title || "Research Report";
+	const date = metadata?.date
+		? new Date(metadata.date).toLocaleDateString("en-US", {
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+			})
+		: new Date().toLocaleDateString("en-US", {
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+			});
+
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>${title}</title>
+	<style>
+		/* PDF-optimized styles */
+		@page {
+			size: A4;
+			margin: 2cm 2.5cm;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Georgia', 'Times New Roman', serif;
+			font-size: 11pt;
+			line-height: 1.6;
+			color: #1a1a1a;
+			max-width: 100%;
+			margin: 0;
+			padding: 0;
+			background: white;
+		}
+
+		/* Cover page */
+		.cover-page {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			text-align: center;
+			page-break-after: always;
+			padding: 2rem;
+		}
+
+		.cover-page h1 {
+			font-size: 32pt;
+			font-weight: 700;
+			color: #0f172a;
+			margin: 0 0 1rem 0;
+			line-height: 1.2;
+		}
+
+		.cover-page .subtitle {
+			font-size: 14pt;
+			color: #64748b;
+			margin: 0 0 3rem 0;
+			font-style: italic;
+		}
+
+		.cover-page .metadata {
+			margin-top: 4rem;
+			padding-top: 2rem;
+			border-top: 2px solid #e2e8f0;
+			width: 100%;
+			max-width: 500px;
+		}
+
+		.cover-page .metadata-item {
+			display: flex;
+			justify-content: space-between;
+			margin: 0.75rem 0;
+			font-size: 11pt;
+		}
+
+		.cover-page .metadata-label {
+			font-weight: 600;
+			color: #475569;
+		}
+
+		.cover-page .metadata-value {
+			color: #64748b;
+		}
+
+		/* Main content */
+		.content {
+			page-break-before: always;
+		}
+
+		/* Typography */
+		h1, h2, h3, h4, h5, h6 {
+			font-family: 'Arial', 'Helvetica', sans-serif;
+			font-weight: 700;
+			color: #0f172a;
+			margin-top: 1.5em;
+			margin-bottom: 0.5em;
+			line-height: 1.3;
+			page-break-after: avoid;
+		}
+
+		h1 {
+			font-size: 24pt;
+			border-bottom: 3px solid #3b82f6;
+			padding-bottom: 0.3em;
+			margin-top: 0;
+		}
+
+		h2 {
+			font-size: 18pt;
+			border-bottom: 2px solid #e2e8f0;
+			padding-bottom: 0.2em;
+			page-break-before: auto;
+		}
+
+		h3 {
+			font-size: 14pt;
+			color: #1e293b;
+		}
+
+		h4 {
+			font-size: 12pt;
+			color: #334155;
+		}
+
+		p {
+			margin: 0.75em 0;
+			text-align: justify;
+			orphans: 3;
+			widows: 3;
+		}
+
+		/* Links */
+		a {
+			color: #2563eb;
+			text-decoration: none;
+			word-wrap: break-word;
+		}
+
+		a:after {
+			content: " (" attr(href) ")";
+			font-size: 9pt;
+			color: #64748b;
+			font-style: italic;
+		}
+
+		/* Lists */
+		ul, ol {
+			margin: 0.75em 0;
+			padding-left: 2em;
+		}
+
+		li {
+			margin: 0.4em 0;
+			page-break-inside: avoid;
+		}
+
+		/* Code blocks */
+		pre {
+			background-color: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-left: 4px solid #3b82f6;
+			border-radius: 4px;
+			padding: 1em;
+			margin: 1em 0;
+			overflow-x: auto;
+			page-break-inside: avoid;
+			font-size: 9pt;
+			line-height: 1.5;
+		}
+
+		code {
+			font-family: 'Courier New', 'Consolas', monospace;
+			background-color: #f1f5f9;
+			padding: 0.2em 0.4em;
+			border-radius: 3px;
+			font-size: 9.5pt;
+		}
+
+		pre code {
+			background-color: transparent;
+			padding: 0;
+			border-radius: 0;
+		}
+
+		/* Blockquotes */
+		blockquote {
+			margin: 1em 0;
+			padding: 0.75em 1em;
+			border-left: 4px solid #3b82f6;
+			background-color: #f8fafc;
+			font-style: italic;
+			page-break-inside: avoid;
+		}
+
+		/* Tables */
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 1.5em 0;
+			page-break-inside: avoid;
+			font-size: 10pt;
+		}
+
+		th {
+			background-color: #f1f5f9;
+			font-weight: 700;
+			text-align: left;
+			padding: 0.75em;
+			border: 1px solid #cbd5e1;
+		}
+
+		td {
+			padding: 0.6em 0.75em;
+			border: 1px solid #e2e8f0;
+		}
+
+		tr:nth-child(even) {
+			background-color: #f8fafc;
+		}
+
+		/* Table of Contents */
+		nav {
+			background-color: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 6px;
+			padding: 1.5em;
+			margin: 2em 0;
+			page-break-inside: avoid;
+		}
+
+		nav h2 {
+			margin-top: 0;
+			font-size: 16pt;
+			border-bottom: none;
+		}
+
+		nav ul {
+			list-style-type: none;
+			padding-left: 0;
+		}
+
+		nav ul li {
+			margin: 0.5em 0;
+		}
+
+		nav a {
+			color: #1e293b;
+			text-decoration: none;
+		}
+
+		nav a:after {
+			content: "";
+		}
+
+		nav a:hover {
+			color: #3b82f6;
+		}
+
+		/* Horizontal rules */
+		hr {
+			border: none;
+			border-top: 2px solid #e2e8f0;
+			margin: 2em 0;
+		}
+
+		/* Images */
+		img {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			margin: 1em auto;
+			page-break-inside: avoid;
+		}
+
+		/* Strong and emphasis */
+		strong {
+			font-weight: 700;
+			color: #0f172a;
+		}
+
+		em {
+			font-style: italic;
+		}
+
+		/* Page breaks */
+		.page-break {
+			page-break-after: always;
+		}
+
+		/* Sources section special styling */
+		h2#sources {
+			margin-top: 3em;
+			page-break-before: always;
+		}
+	</style>
+</head>
+<body>
+	<!-- Cover Page -->
+	<div class="cover-page">
+		<h1>${title}</h1>
+		${metadata?.query ? `<p class="subtitle">${metadata.query}</p>` : ""}
+		<div class="metadata">
+			<div class="metadata-item">
+				<span class="metadata-label">Generated:</span>
+				<span class="metadata-value">${date}</span>
+			</div>
+			<div class="metadata-item">
+				<span class="metadata-label">Format:</span>
+				<span class="metadata-value">AI Research Report</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Main Content -->
+	<div class="content">
+		${htmlContent}
+	</div>
+</body>
+</html>`;
 }

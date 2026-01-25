@@ -55,8 +55,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced magic numbers with centralized config values from `src/config.ts`
 - Improved type safety: removed `any` types, added proper error type guards
 - Better error handling with `isRateLimitError()` helper function
+- Upgraded zod from v3 to v4 - using new top-level `z.uuid()` format validator
+- Upgraded AI SDK from v4 to v6 for zod v4 compatibility
+- Upgraded @ai-sdk/google from v1 to v3 for zod v4 support
+- Upgraded @biomejs/biome from v1.9 to v2.3 with migrated config
+- Upgraded hono from v4.7 to v4.11
+- Upgraded marked from v15 to v17
+- Upgraded node-html-markdown from v1.3 to v2.0
+- Upgraded vitest from v3.2 to v4.0
+- Upgraded wrangler from v4.20 to v4.60
+- Upgraded workers-qb from v1.10 to v1.13
+- Upgraded typescript from v5.8 to v5.9
+- Upgraded @cloudflare/puppeteer from v1.0.2 to v1.0.5
+- Upgraded @cloudflare/workers-types to v4.20260124
+- Upgraded tailwindcss and @tailwindcss/cli from v4.1.8 to v4.1.18
+- Upgraded @types/node from v22.15 to v25.0
 
 ### Fixed
+- Fixed D1 migration error with `DEFAULT CURRENT_TIMESTAMP` in ALTER TABLE (not allowed by SQLite)
+- Fixed research intensity presets (Quick/Standard/Thorough) not responding to clicks
+- Fixed download report dropdown not opening
+- Fixed re-run and delete buttons not working
+- Fixed JavaScript functions with incorrect underscore prefixes causing onclick handlers to fail
 
 ### Security
 - Fixed XSS vulnerability by adding HTML sanitization with `sanitize-html` in markdown rendering

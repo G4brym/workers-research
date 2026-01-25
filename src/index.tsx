@@ -1,5 +1,5 @@
 import puppeteer from "@cloudflare/puppeteer";
-import { LoadAPIKeyError, generateObject, generateText } from "ai";
+import { generateObject, generateText, LoadAPIKeyError } from "ai";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
@@ -7,17 +7,12 @@ import { D1QB } from "workers-qb";
 import { z } from "zod";
 import type { Env, Variables } from "./bindings";
 import {
-	config,
-	createResearchSchema,
 	generateCsrfToken,
 	getCsrfCookieName,
 	getCsrfFormField,
-	idParamSchema,
-	paginationSchema,
-	questionsSchema,
 	validateEnvSecrets,
 } from "./config";
-import { renderMarkdownReportContent } from "./markdown";
+import { renderMarkdownReportContent, renderPdfDocument } from "./markdown";
 import { migrations } from "./migrations";
 import { FOLLOWUP_QUESTIONS_PROMPT, SUMMARIZE_PROMPT } from "./prompts";
 import { getReportWithR2Resolution } from "./storage";
@@ -135,7 +130,7 @@ app.onError((err, c) => {
 			<h2>{err.name}</h2>
 			<p>{err.message}</p>
 		</ErrorPage>,
-		// @ts-ignore
+		// @ts-expect-error
 		statusCode,
 	);
 });
@@ -144,7 +139,7 @@ app.get("/", async (c) => {
 	const qb = new D1QB(c.env.DB);
 	const { page = "1", partial, q, status, sort } = c.req.query();
 	const pageSize = 5; // Items per page
-	const offset = (Number.parseInt(page) - 1) * pageSize;
+	const offset = (Number.parseInt(page, 10) - 1) * pageSize;
 
 	// Build where conditions
 	const conditions: string[] = [];
@@ -214,7 +209,7 @@ app.get("/", async (c) => {
 			results: researches.results,
 			totalCount: totalCount,
 		},
-		page: Number.parseInt(page),
+		page: Number.parseInt(page, 10),
 		totalCompleted: totalCompleted,
 		totalProcessing: totalProcessing,
 		avgDuration: avgDuration ? formatDuration(avgDuration) : "--",
@@ -483,14 +478,12 @@ app.get("/details/:id", async (c) => {
 						Clone
 					</a>
 					<button
-						// @ts-ignore
 						onClick={`rerun("${id}")`}
 						className="px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50"
 					>
 						Re-run
 					</button>
 					<button
-						// @ts-ignore
 						onClick={`deleteItem("${id}")`}
 						className="px-3 py-2 text-sm font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-md hover:bg-red-100 dark:hover:bg-red-900/50"
 					>
@@ -631,23 +624,39 @@ app.get("/details/:id/download/pdf", async (c) => {
 		resp.results.result,
 	);
 	const content = reportContent ?? "";
-	const htmlContent = renderMarkdownReportContent(content);
+
+	// Generate beautifully styled PDF document
+	const htmlContent = renderPdfDocument(content, {
+		title: resp.results.title || "Research Report",
+		date: resp.results.created_at,
+		query: resp.results.query,
+	});
 
 	const browser = await puppeteer.launch(c.env.BROWSER);
 	const page = await browser.newPage();
 
-	// // Step 2: Send HTML and CSS to our browser
-	await page.setContent(htmlContent);
+	// Set content with proper wait for load
+	await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
-	// // Step 3: Generate and return PDF
-	const pdf = await page.pdf({ printBackground: true });
+	// Generate high-quality PDF with improved options
+	const pdf = await page.pdf({
+		format: "A4",
+		printBackground: true,
+		margin: {
+			top: "20mm",
+			right: "20mm",
+			bottom: "20mm",
+			left: "20mm",
+		},
+		preferCSSPageSize: true,
+	});
 
 	// Close browser since we no longer need it
 	await browser.close();
 
 	c.header("Content-Type", "application/pdf");
 	c.header("Content-Disposition", 'attachment; filename="report.pdf"');
-	return c.body(pdf);
+	return c.body(new Uint8Array(pdf));
 });
 
 app.get("/details/:id/download/markdown", async (c) => {

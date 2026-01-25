@@ -1,8 +1,6 @@
 import { generateObject, generateText } from "ai";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { z } from "zod";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Env } from "./bindings";
-import { RESEARCH_PROMPT } from "./prompts";
 import { getFallbackModel, getModel, getModelThinking } from "./utils"; // Adjust path as needed
 import {
 	deduplicateLearnings,
@@ -594,7 +592,7 @@ describe("writeFinalReport edge cases", () => {
 		});
 
 		expect(result).toContain("Report content.");
-		// Should still have sources section but empty
-		expect(result).toContain("## Sources");
+		// Should NOT have sources section when visitedUrls is empty
+		expect(result).not.toContain("## Sources");
 	});
 });

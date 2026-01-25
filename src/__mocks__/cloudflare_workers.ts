@@ -13,7 +13,7 @@ export class WorkflowEntrypoint {
 // Add other exports if workflows.ts or its dependencies use them
 // For example, if 'step' objects or other types/functions are used:
 export const step = {
-	do: vi.fn(async (name, fn) => {
+	do: vi.fn(async (_name, fn) => {
 		if (fn) {
 			return fn();
 		}

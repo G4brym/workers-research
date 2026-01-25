@@ -88,7 +88,7 @@ export const migrations: Migration[] = [
 	{
 		name: "0009_add_updated_at_and_deleted_at.sql",
 		sql: `
-		ALTER TABLE researches ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+		ALTER TABLE researches ADD COLUMN updated_at TIMESTAMP;
 		ALTER TABLE researches ADD COLUMN deleted_at TIMESTAMP;
 		CREATE INDEX IF NOT EXISTS idx_researches_deleted_at ON researches(deleted_at);
 		`,

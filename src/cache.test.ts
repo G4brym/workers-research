@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
+	batchGetCachedUrls,
 	CACHE_TTL,
 	type CachedSearchResults,
 	type CachedUrlContent,
-	batchGetCachedUrls,
 	getCachedSearchResults,
 	getCachedUrlContent,
 	getSearchCacheKey,

@@ -59,7 +59,7 @@ export const ResearchStatusHistoryDisplay: FC<{
 	isLiveView?: boolean;
 }> = (props) => {
 	const { statusHistory, isLiveView = false } = props; // Default isLiveView to false
-	const title = isLiveView ? "Live Status Updates" : "Research History Log";
+	const _title = isLiveView ? "Live Status Updates" : "Research History Log";
 
 	if (!statusHistory || statusHistory.length === 0) {
 		return (
@@ -829,7 +829,39 @@ export const ResearchDetails: FC = (props) => {
 			{/* Report Content - direct child of main */}
 			{researchData.status !== 1 && (
 				<div className="prose prose-lg dark:prose-invert max-w-none">
-					<div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+					<div
+						className={`rounded-lg shadow-sm p-8 ${
+							researchData.status === 3
+								? "bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700"
+								: "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+						}`}
+					>
+						{researchData.status === 3 && (
+							<div className="not-prose mb-6 p-4 bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500 rounded-r">
+								<div className="flex items-start">
+									<svg
+										className="w-6 h-6 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5"
+										fill="currentColor"
+										viewBox="0 0 20 20"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+											clip-rule="evenodd"
+										></path>
+									</svg>
+									<div>
+										<h3 className="text-lg font-semibold text-red-900 dark:text-red-200 mb-1">
+											Research Failed
+										</h3>
+										<p className="text-sm text-red-800 dark:text-red-300">
+											The research process encountered an error and could not
+											complete. Details are shown below.
+										</p>
+									</div>
+								</div>
+							</div>
+						)}
 						{html(researchData.report_html)}
 					</div>
 				</div>
@@ -1033,7 +1065,7 @@ export const CreateResearch: FC<CreateResearchProps> = (props) => {
 								type="button"
 								data-preset="3-3"
 								onClick="applyPreset(3, 3)"
-								className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ring-2 ring-blue-500 transition-colors"
+								className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ring-2 ring-blue-500"
 							>
 								Standard
 							</button>

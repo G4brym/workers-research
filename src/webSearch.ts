@@ -39,7 +39,7 @@ async function performSearch(
 
 			return (
 				links
-					// @ts-ignore
+					// @ts-expect-error
 					.map((link) => link.href)
 					.filter((url) => url?.startsWith("http"))
 			); // Ensure valid URLs
@@ -62,7 +62,7 @@ async function extractContent(
 		if (logCrawlUrl) {
 			await logCrawlUrl(url);
 		}
-		const response = await page.goto(url, {
+		const _response = await page.goto(url, {
 			waitUntil: "domcontentloaded",
 			timeout: 20000,
 		});
@@ -76,8 +76,9 @@ async function extractContent(
 					el.textContent.toLowerCase().includes("close") ||
 					el.textContent.includes("×"),
 			);
-			// @ts-ignore
-			closeButtons.forEach((btn) => btn.click());
+			closeButtons.forEach((btn) => {
+				(btn as HTMLElement).click();
+			});
 		});
 		await sleep(1000); // Allow popups to close
 
@@ -97,11 +98,13 @@ async function extractContent(
 			// Extract main content (simplified readability approach)
 			const body = document.body.cloneNode(true);
 			body
-				// @ts-ignore
+				// @ts-expect-error
 				.querySelectorAll("script, style, nav, header, footer")
-				.forEach((el) => el.remove());
+				.forEach((el) => {
+					el.remove();
+				});
 
-			// @ts-ignore
+			// @ts-expect-error
 			const mainContent = body.outerHTML;
 
 			return {

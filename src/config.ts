@@ -87,7 +87,7 @@ export const paginationSchema = z.object({
 });
 
 export const idParamSchema = z.object({
-	id: z.string().uuid("Invalid research ID"),
+	id: z.uuid("Invalid research ID"),
 });
 
 export const questionsSchema = z.object({

@@ -1,7 +1,7 @@
 import {
+	createGoogleGenerativeAI,
 	type GoogleGenerativeAIProvider,
 	type GoogleGenerativeAIProviderSettings,
-	createGoogleGenerativeAI,
 } from "@ai-sdk/google";
 import type { Env } from "./bindings";
 
@@ -26,7 +26,7 @@ function getGoogleProvider(env: Env): GoogleGenerativeAIProvider {
 export function getModel(env: Env) {
 	const google = getGoogleProvider(env);
 
-	return google("gemini-2.5-flash-preview-05-20");
+	return google("gemini-2.0-flash-exp");
 }
 
 export function getFallbackModel(env: Env) {
@@ -37,7 +37,7 @@ export function getFallbackModel(env: Env) {
 export function getModelThinking(env: Env) {
 	const google = getGoogleProvider(env);
 
-	return google("gemini-2.5-flash-preview-05-20");
+	return google("gemini-2.0-flash-exp");
 }
 
 export function timeAgo(date: Date): string {

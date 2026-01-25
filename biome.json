@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.12/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -7,15 +7,19 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["dist/*", "src/forms/templates/*", "src/forms/precompiled.mjs"]
+		"includes": [
+			"**",
+			"!**/dist/**/*",
+			"!**/src/forms/templates/**/*",
+			"!**/src/forms/precompiled.mjs",
+			"!**/src/static/styles.css"
+		]
 	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab"
 	},
-	"organizeImports": {
-		"enabled": true
-	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
 		"enabled": true,
 		"rules": {
@@ -35,7 +39,8 @@
 			"complexity": {
 				"noStaticOnlyClass": "off",
 				"noBannedTypes": "off",
-				"noForEach": "off"
+				"noForEach": "off",
+				"noImportantStyles": "off"
 			},
 			"a11y": {
 				"useButtonType": "off",
@@ -54,5 +59,18 @@
 		"formatter": {
 			"quoteStyle": "double"
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/src/static/*.js"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUnusedFunctionParameters": "off"
+					}
+				}
+			}
+		}
+	]
 }
