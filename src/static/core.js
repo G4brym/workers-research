@@ -94,10 +94,12 @@ function loadNewResearch() {
 					const existingFields = finalForm.querySelectorAll(
 						'input[name^="question_"], input[name^="answer_"]',
 					);
-					existingFields.forEach((field) => field.remove());
+					existingFields.forEach((field) => {
+						field.remove();
+					});
 
 					// Add questions and answers
-					questions.forEach((input, index) => {
+					questions.forEach((input, _index) => {
 						const questionText = input
 							.closest(".question-item")
 							.querySelector(".question-text").textContent;
@@ -186,38 +188,98 @@ document.addEventListener("DOMContentLoaded", () => {
 function loadResearchList() {
 	// Add interactive functionality
 	document.addEventListener("DOMContentLoaded", () => {
-		// Search functionality
-		const searchInput = document.querySelector('input[type="text"]');
-		searchInput.addEventListener("input", (e) => {
-			// In a real app, this would filter the results
-			console.log("Searching for:", e.target.value);
-		});
+		initSearchAndFilter();
+	});
+}
 
-		// Filter dropdowns
-		const filterSelects = document.querySelectorAll("select");
-		filterSelects.forEach((select) => {
-			select.addEventListener("change", (e) => {
-				// In a real app, this would filter the results
-				console.log("Filter changed:", e.target.value);
-			});
-		});
+// Initialize search and filter functionality
+function initSearchAndFilter() {
+	const searchInput = document.getElementById("search-input");
+	const statusFilter = document.getElementById("status-filter");
+	const sortBy = document.getElementById("sort-by");
 
-		// Action buttons
-		const actionButtons = document.querySelectorAll("button");
-		actionButtons.forEach((button) => {
-			if (
-				button.textContent.includes("View") ||
-				button.textContent.includes("Continue") ||
-				button.textContent.includes("Retry")
-			) {
-				button.addEventListener("click", (e) => {
-					e.preventDefault();
-					console.log("Action clicked:", button.textContent);
-					// In a real app, this would navigate to the appropriate page
-				});
+	// Read current URL params and set initial values
+	const urlParams = new URLSearchParams(window.location.search);
+	if (searchInput && urlParams.get("q")) {
+		searchInput.value = urlParams.get("q");
+	}
+	if (statusFilter && urlParams.get("status")) {
+		statusFilter.value = urlParams.get("status");
+	}
+	if (sortBy && urlParams.get("sort")) {
+		sortBy.value = urlParams.get("sort");
+	}
+
+	// Debounce function for search
+	let searchTimeout;
+	function debounce(fn, delay) {
+		return function (...args) {
+			clearTimeout(searchTimeout);
+			searchTimeout = setTimeout(() => fn.apply(this, args), delay);
+		};
+	}
+
+	// Update URL and refresh list
+	function applyFilters() {
+		const params = new URLSearchParams();
+		const page = urlParams.get("page");
+		if (page) params.set("page", "1"); // Reset to page 1 when filtering
+
+		if (searchInput?.value.trim()) {
+			params.set("q", searchInput.value.trim());
+		}
+		if (statusFilter?.value) {
+			params.set("status", statusFilter.value);
+		}
+		if (sortBy?.value) {
+			params.set("sort", sortBy.value);
+		}
+
+		const queryString = params.toString();
+		window.location.href = queryString ? `/?${queryString}` : "/";
+	}
+
+	// Search with debounce (300ms delay)
+	if (searchInput) {
+		searchInput.addEventListener(
+			"input",
+			debounce(() => {
+				applyFilters();
+			}, 500),
+		);
+		// Also trigger on Enter key
+		searchInput.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				applyFilters();
 			}
 		});
-	});
+	}
+
+	// Instant filter on select change
+	if (statusFilter) {
+		statusFilter.addEventListener("change", applyFilters);
+	}
+	if (sortBy) {
+		sortBy.addEventListener("change", applyFilters);
+	}
+}
+
+// Helper function to get CSRF token from cookie
+function getCsrfToken() {
+	const cookie = document.cookie
+		.split("; ")
+		.find((row) => row.startsWith("__csrf="));
+	return cookie ? cookie.split("=")[1] : "";
+}
+
+// Helper function to add CSRF token to a form
+function addCsrfToForm(form) {
+	const csrfField = document.createElement("input");
+	csrfField.type = "hidden";
+	csrfField.name = "_csrf";
+	csrfField.value = getCsrfToken();
+	form.appendChild(csrfField);
 }
 
 function rerun(id) {
@@ -225,6 +287,8 @@ function rerun(id) {
 		const form = document.createElement("form");
 		form.method = "POST";
 		form.action = "/re-run";
+
+		addCsrfToForm(form);
 
 		const idField = document.createElement("input");
 		idField.type = "hidden";
@@ -242,6 +306,8 @@ function deleteItem(id) {
 		const form = document.createElement("form");
 		form.method = "POST";
 		form.action = "/delete";
+
+		addCsrfToForm(form);
 
 		const idField = document.createElement("input");
 		idField.type = "hidden";
@@ -274,3 +340,204 @@ function toggleAutoRagDropdown(checked) {
 		}
 	}
 }
+
+// ============================================
+// Dark Mode
+// ============================================
+
+function toggleDarkMode() {
+	const isDark = document.documentElement.classList.toggle("dark");
+	localStorage.setItem("darkMode", isDark ? "true" : "false");
+}
+
+// ============================================
+// Depth/Breadth Presets
+// ============================================
+
+function applyPreset(depth, breadth) {
+	const depthInput = document.getElementById("initial-depth");
+	const breadthInput = document.getElementById("initial-breadth");
+	if (depthInput) depthInput.value = depth;
+	if (breadthInput) breadthInput.value = breadth;
+
+	// Update preset button styles
+	document.querySelectorAll("[data-preset]").forEach((btn) => {
+		btn.classList.remove("ring-2", "ring-blue-500");
+	});
+	const activeBtn = document.querySelector(
+		`[data-preset="${depth}-${breadth}"]`,
+	);
+	if (activeBtn) {
+		activeBtn.classList.add("ring-2", "ring-blue-500");
+	}
+}
+
+// ============================================
+// Keyboard Shortcuts
+// ============================================
+
+let shortcutsModalOpen = false;
+
+function showShortcutsModal() {
+	const modal = document.getElementById("shortcuts-modal");
+	if (modal) {
+		modal.classList.remove("hidden");
+		shortcutsModalOpen = true;
+	}
+}
+
+function hideShortcutsModal() {
+	const modal = document.getElementById("shortcuts-modal");
+	if (modal) {
+		modal.classList.add("hidden");
+		shortcutsModalOpen = false;
+	}
+}
+
+document.addEventListener("keydown", (e) => {
+	// Don't trigger shortcuts when typing in inputs
+	if (
+		e.target.tagName === "INPUT" ||
+		e.target.tagName === "TEXTAREA" ||
+		e.target.tagName === "SELECT"
+	) {
+		// Allow Escape to close modal even when in input
+		if (e.key === "Escape" && shortcutsModalOpen) {
+			hideShortcutsModal();
+		}
+		return;
+	}
+
+	// ? - Show shortcuts help
+	if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+		e.preventDefault();
+		if (shortcutsModalOpen) {
+			hideShortcutsModal();
+		} else {
+			showShortcutsModal();
+		}
+	}
+
+	// Escape - Close modal
+	if (e.key === "Escape") {
+		hideShortcutsModal();
+	}
+
+	// n - New research
+	if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
+		e.preventDefault();
+		window.location.href = "/create";
+	}
+
+	// h or g h - Go home
+	if (e.key === "h" && !e.ctrlKey && !e.metaKey) {
+		e.preventDefault();
+		window.location.href = "/";
+	}
+
+	// Ctrl/Cmd + d - Toggle dark mode
+	if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+		e.preventDefault();
+		toggleDarkMode();
+	}
+
+	// j/k - Navigate list items
+	if ((e.key === "j" || e.key === "k") && !e.ctrlKey && !e.metaKey) {
+		const items = document.querySelectorAll('[href^="/details/"]');
+		if (items.length === 0) return;
+
+		e.preventDefault();
+		const focused = document.activeElement;
+		let currentIndex = -1;
+
+		items.forEach((item, index) => {
+			if (item === focused || item.closest(".hover\\:bg-gray-50") === focused) {
+				currentIndex = index;
+			}
+		});
+
+		let nextIndex;
+		if (e.key === "j") {
+			nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+		} else {
+			nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+		}
+
+		items[nextIndex].focus();
+	}
+
+	// Enter - Follow focused link
+	if (e.key === "Enter" && document.activeElement.tagName === "A") {
+		document.activeElement.click();
+	}
+
+	// / - Focus search (if exists)
+	if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+		const searchInput = document.querySelector('input[type="search"]');
+		if (searchInput) {
+			e.preventDefault();
+			searchInput.focus();
+		}
+	}
+});
+
+// Create shortcuts modal on page load
+document.addEventListener("DOMContentLoaded", () => {
+	// Create modal if it doesn't exist
+	if (!document.getElementById("shortcuts-modal")) {
+		const modal = document.createElement("div");
+		modal.id = "shortcuts-modal";
+		modal.className =
+			"hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50";
+		modal.innerHTML = `
+			<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+				<div class="flex justify-between items-center mb-4">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">Keyboard Shortcuts</h3>
+					<button onclick="hideShortcutsModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				<div class="space-y-3 text-sm">
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>New research</span>
+						<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">n</kbd>
+					</div>
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>Go home</span>
+						<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">h</kbd>
+					</div>
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>Toggle dark mode</span>
+						<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl+D</kbd>
+					</div>
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>Navigate list</span>
+						<span>
+							<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">j</kbd>
+							<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded ml-1">k</kbd>
+						</span>
+					</div>
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>Show this help</span>
+						<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">?</kbd>
+					</div>
+					<div class="flex justify-between text-gray-700 dark:text-gray-300">
+						<span>Close modal</span>
+						<kbd class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Esc</kbd>
+					</div>
+				</div>
+			</div>
+		`;
+		modal.addEventListener("click", (e) => {
+			if (e.target === modal) hideShortcutsModal();
+		});
+		document.body.appendChild(modal);
+	}
+
+	// Initialize search and filter if on the list page
+	if (document.getElementById("search-input")) {
+		initSearchAndFilter();
+	}
+});

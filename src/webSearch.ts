@@ -1,6 +1,13 @@
 import puppeteer, { type Browser } from "@cloudflare/puppeteer";
 import { NodeHtmlMarkdown } from "node-html-markdown";
 import type { Env } from "./bindings";
+import {
+	type CachedUrlContent,
+	getCachedSearchResults,
+	getCachedUrlContent,
+	setCachedSearchResults,
+	setCachedUrlContent,
+} from "./cache";
 import { sleep } from "./utils";
 
 export type SearchResult = {
@@ -32,7 +39,7 @@ async function performSearch(
 
 			return (
 				links
-					// @ts-ignore
+					// @ts-expect-error
 					.map((link) => link.href)
 					.filter((url) => url?.startsWith("http"))
 			); // Ensure valid URLs
@@ -55,7 +62,7 @@ async function extractContent(
 		if (logCrawlUrl) {
 			await logCrawlUrl(url);
 		}
-		const response = await page.goto(url, {
+		const _response = await page.goto(url, {
 			waitUntil: "domcontentloaded",
 			timeout: 20000,
 		});
@@ -69,8 +76,9 @@ async function extractContent(
 					el.textContent.toLowerCase().includes("close") ||
 					el.textContent.includes("×"),
 			);
-			// @ts-ignore
-			closeButtons.forEach((btn) => btn.click());
+			closeButtons.forEach((btn) => {
+				(btn as HTMLElement).click();
+			});
 		});
 		await sleep(1000); // Allow popups to close
 
@@ -90,11 +98,13 @@ async function extractContent(
 			// Extract main content (simplified readability approach)
 			const body = document.body.cloneNode(true);
 			body
-				// @ts-ignore
+				// @ts-expect-error
 				.querySelectorAll("script, style, nav, header, footer")
-				.forEach((el) => el.remove());
+				.forEach((el) => {
+					el.remove();
+				});
 
-			// @ts-ignore
+			// @ts-expect-error
 			const mainContent = body.outerHTML;
 
 			return {
@@ -150,27 +160,73 @@ export async function getBrowser(env: Env): Promise<ResearchBrowser> {
 	return new ResearchBrowser(env);
 }
 
+export interface WebSearchOptions {
+	logCrawlUrl?: (url: string) => Promise<void>;
+	cache?: KVNamespace;
+}
+
 export async function webSearch(
 	browser: Browser,
 	query: string,
 	limit: number,
-	logCrawlUrl?: (url: string) => Promise<void>,
+	options?: WebSearchOptions,
 ): Promise<SearchResult[]> {
-	const searchResults = await performSearch(browser, query, limit);
+	const { logCrawlUrl, cache } = options ?? {};
 
-	const promises: Array<Promise<SearchResult>> = [];
-	for (const result of searchResults) {
-		promises.push(extractCrawlContent(browser, result, logCrawlUrl));
+	// Check cache for search results first
+	const cachedSearch = await getCachedSearchResults(cache, query);
+	let searchUrls: string[];
+
+	if (cachedSearch) {
+		searchUrls = cachedSearch.urls.slice(0, limit);
+	} else {
+		searchUrls = await performSearch(browser, query, limit);
+		// Cache search results
+		await setCachedSearchResults(cache, query, {
+			urls: searchUrls,
+			searchedAt: new Date().toISOString(),
+		});
 	}
 
-	// Helper function name changed to avoid potential confusion if extractContent is used elsewhere without the callback
-	async function extractCrawlContent(
-		browser: Browser,
-		url: string,
-		logCrawlUrl?: (url: string) => Promise<void>,
-	): Promise<SearchResult> {
-		return extractContent(browser, url, logCrawlUrl);
+	const promises: Array<Promise<SearchResult>> = [];
+	for (const url of searchUrls) {
+		promises.push(extractWithCache(browser, url, logCrawlUrl, cache));
 	}
 
 	return await Promise.all(promises);
+}
+
+/**
+ * Extract content from URL with caching support
+ */
+async function extractWithCache(
+	browser: Browser,
+	url: string,
+	logCrawlUrl?: (url: string) => Promise<void>,
+	cache?: KVNamespace,
+): Promise<SearchResult> {
+	// Check cache first
+	const cached = await getCachedUrlContent(cache, url);
+	if (cached) {
+		return {
+			title: cached.title || "Cached content",
+			description: "Loaded from cache",
+			url: url,
+			markdown: cached.content,
+			links: [], // Links not cached - less important for research
+		};
+	}
+
+	// Fetch fresh content
+	const result = await extractContent(browser, url, logCrawlUrl);
+
+	// Cache the result
+	const cacheEntry: CachedUrlContent = {
+		content: result.markdown,
+		title: result.title,
+		crawledAt: new Date().toISOString(),
+	};
+	await setCachedUrlContent(cache, url, cacheEntry);
+
+	return result;
 }
