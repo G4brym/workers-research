@@ -184,7 +184,6 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
 
 - **[GitHub Issues](https://github.com/G4brym/workers-research/issues):** Report bugs or suggest features
 - **[Discussions](https://github.com/G4brym/workers-research/discussions):** Ask questions and share ideas
-- **[Discord Community](https://discord.gg/example):** Join our community for real-time help
 
 ## 🖼️ Screenshots
 
