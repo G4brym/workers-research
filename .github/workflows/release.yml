@@ -54,6 +54,9 @@ jobs:
           commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NODE_AUTH_TOKEN is intentionally omitted — this repo uses npm trusted
+          # publishing (OIDC). Authentication is handled via the id-token permission
+          # and the trusted publishing configuration on npmjs.com.
 
       - name: Create GitHub Release
         run: |
@@ -66,10 +69,13 @@ jobs:
             if [ -z "$BODY" ]; then
               BODY="See [CHANGELOG.md](https://github.com/G4brym/workers-research/blob/main/CHANGELOG.md) for details."
             fi
+            NOTES_FILE=$(mktemp)
+            printf '%s' "$BODY" > "$NOTES_FILE"
             gh release create "$TAG" \
               --title "$TAG" \
-              --notes "$BODY" \
+              --notes-file "$NOTES_FILE" \
               --latest
+            rm -f "$NOTES_FILE"
             echo "Created release $TAG"
           fi
         env:
