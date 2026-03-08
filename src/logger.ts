@@ -228,9 +228,17 @@ export function logReportGeneration(
 	});
 }
 
-export function logRateLimitRetry(operation: string, query: string): void {
-	logger.warn(`Rate limit hit, retrying with fallback model`, {
-		step: operation,
-		query: query.substring(0, 100),
-	});
+export function logRateLimitRetry(
+	operation: string,
+	query: string,
+	delayMs?: number,
+): void {
+	logger.warn(
+		`Rate limit hit, waiting ${delayMs ?? 0}ms before retrying with fallback model`,
+		{
+			step: operation,
+			query: query.substring(0, 100),
+			delayMs,
+		},
+	);
 }
