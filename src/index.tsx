@@ -759,7 +759,7 @@ app.post("/re-run", async (c) => {
 		})
 		.execute();
 
-	if (!resp) {
+	if (!resp.results) {
 		throw new HTTPException(404, { message: "research not found" });
 	}
 
@@ -837,7 +837,7 @@ app.post("/delete", async (c) => {
 		})
 		.execute();
 
-	if (!resp) {
+	if (!resp.results) {
 		throw new HTTPException(404, { message: "research not found" });
 	}
 
