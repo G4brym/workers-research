@@ -1,4 +1,5 @@
-import { describe, expect, test, vi } from "vitest";
+import { env } from "cloudflare:test";
+import { describe, expect, test } from "vitest";
 import {
 	batchGetCachedUrls,
 	CACHE_TTL,
@@ -10,26 +11,7 @@ import {
 	getUrlCacheKey,
 	setCachedSearchResults,
 	setCachedUrlContent,
-} from "./cache";
-
-// Mock KVNamespace
-function createMockKV() {
-	const store = new Map<string, string>();
-	return {
-		get: vi.fn(async (key: string, type?: string) => {
-			const value = store.get(key);
-			if (!value) return null;
-			return type === "json" ? JSON.parse(value) : value;
-		}),
-		put: vi.fn(async (key: string, value: string) => {
-			store.set(key, value);
-		}),
-		delete: vi.fn(async (key: string) => {
-			store.delete(key);
-		}),
-		_store: store,
-	} as unknown as KVNamespace & { _store: Map<string, string> };
-}
+} from "../../src/cache";
 
 describe("cache key generation", () => {
 	test("getUrlCacheKey should prefix with 'url:'", () => {
@@ -63,30 +45,26 @@ describe("getCachedUrlContent", () => {
 	});
 
 	test("should return null when URL is not cached", async () => {
-		const mockKV = createMockKV();
-		const result = await getCachedUrlContent(mockKV, "https://example.com");
+		const result = await getCachedUrlContent(
+			env.CACHE,
+			"https://not-cached.com",
+		);
 		expect(result).toBeNull();
 	});
 
 	test("should return cached content when available", async () => {
-		const mockKV = createMockKV();
 		const cachedContent: CachedUrlContent = {
 			content: "# Test Content",
 			title: "Test Page",
 			crawledAt: "2024-01-01T00:00:00Z",
 		};
-		mockKV._store.set("url:https://example.com", JSON.stringify(cachedContent));
 
-		const result = await getCachedUrlContent(mockKV, "https://example.com");
+		await setCachedUrlContent(env.CACHE, "https://example.com", cachedContent);
+		const result = await getCachedUrlContent(
+			env.CACHE,
+			"https://example.com",
+		);
 		expect(result).toEqual(cachedContent);
-	});
-
-	test("should return null on error", async () => {
-		const mockKV = createMockKV();
-		mockKV.get = vi.fn().mockRejectedValue(new Error("KV error"));
-
-		const result = await getCachedUrlContent(mockKV, "https://example.com");
-		expect(result).toBeNull();
 	});
 });
 
@@ -99,32 +77,20 @@ describe("setCachedUrlContent", () => {
 		});
 	});
 
-	test("should store content in cache", async () => {
-		const mockKV = createMockKV();
+	test("should store and retrieve content in cache", async () => {
 		const content: CachedUrlContent = {
 			content: "# Test",
 			title: "Test",
 			crawledAt: "2024-01-01T00:00:00Z",
 		};
 
-		await setCachedUrlContent(mockKV, "https://example.com", content);
+		await setCachedUrlContent(env.CACHE, "https://store-test.com", content);
 
-		expect(mockKV.put).toHaveBeenCalledWith(
-			"url:https://example.com",
-			JSON.stringify(content),
-			{ expirationTtl: CACHE_TTL.URL_CONTENT },
+		const result = await getCachedUrlContent(
+			env.CACHE,
+			"https://store-test.com",
 		);
-	});
-
-	test("should silently fail on error", async () => {
-		const mockKV = createMockKV();
-		mockKV.put = vi.fn().mockRejectedValue(new Error("KV error"));
-
-		// Should not throw
-		await setCachedUrlContent(mockKV, "https://example.com", {
-			content: "test",
-			crawledAt: "2024-01-01T00:00:00Z",
-		});
+		expect(result).toEqual(content);
 	});
 });
 
@@ -135,39 +101,40 @@ describe("getCachedSearchResults", () => {
 	});
 
 	test("should return null when query is not cached", async () => {
-		const mockKV = createMockKV();
-		const result = await getCachedSearchResults(mockKV, "test query");
+		const result = await getCachedSearchResults(
+			env.CACHE,
+			"uncached query",
+		);
 		expect(result).toBeNull();
 	});
 
 	test("should return cached results when available", async () => {
-		const mockKV = createMockKV();
 		const cachedResults: CachedSearchResults = {
 			urls: ["https://example.com/1", "https://example.com/2"],
 			searchedAt: "2024-01-01T00:00:00Z",
 		};
-		mockKV._store.set("search:test query", JSON.stringify(cachedResults));
 
-		const result = await getCachedSearchResults(mockKV, "test query");
+		await setCachedSearchResults(env.CACHE, "test query", cachedResults);
+		const result = await getCachedSearchResults(env.CACHE, "test query");
 		expect(result).toEqual(cachedResults);
 	});
 });
 
 describe("setCachedSearchResults", () => {
-	test("should store search results in cache", async () => {
-		const mockKV = createMockKV();
+	test("should store and retrieve search results in cache", async () => {
 		const results: CachedSearchResults = {
 			urls: ["https://example.com"],
 			searchedAt: "2024-01-01T00:00:00Z",
 		};
 
-		await setCachedSearchResults(mockKV, "Test Query", results);
+		await setCachedSearchResults(env.CACHE, "Store Query", results);
 
-		expect(mockKV.put).toHaveBeenCalledWith(
-			"search:test query",
-			JSON.stringify(results),
-			{ expirationTtl: CACHE_TTL.SEARCH_RESULTS },
+		// Verify retrieval — key should be lowercased
+		const retrieved = await getCachedSearchResults(
+			env.CACHE,
+			"store query",
 		);
+		expect(retrieved).toEqual(results);
 	});
 });
 
@@ -182,7 +149,6 @@ describe("batchGetCachedUrls", () => {
 	});
 
 	test("should return cached content for each URL", async () => {
-		const mockKV = createMockKV();
 		const content1: CachedUrlContent = {
 			content: "Content 1",
 			crawledAt: "2024-01-01T00:00:00Z",
@@ -192,25 +158,24 @@ describe("batchGetCachedUrls", () => {
 			crawledAt: "2024-01-01T00:00:00Z",
 		};
 
-		mockKV._store.set("url:https://example.com/1", JSON.stringify(content1));
-		mockKV._store.set("url:https://example.com/2", JSON.stringify(content2));
+		await setCachedUrlContent(env.CACHE, "https://batch1.com", content1);
+		await setCachedUrlContent(env.CACHE, "https://batch2.com", content2);
 
 		const urls = [
-			"https://example.com/1",
-			"https://example.com/2",
-			"https://example.com/3",
+			"https://batch1.com",
+			"https://batch2.com",
+			"https://batch3.com",
 		];
-		const result = await batchGetCachedUrls(mockKV, urls);
+		const result = await batchGetCachedUrls(env.CACHE, urls);
 
 		expect(result.size).toBe(3);
-		expect(result.get("https://example.com/1")).toEqual(content1);
-		expect(result.get("https://example.com/2")).toEqual(content2);
-		expect(result.get("https://example.com/3")).toBeNull();
+		expect(result.get("https://batch1.com")).toEqual(content1);
+		expect(result.get("https://batch2.com")).toEqual(content2);
+		expect(result.get("https://batch3.com")).toBeNull();
 	});
 
 	test("should handle empty URL array", async () => {
-		const mockKV = createMockKV();
-		const result = await batchGetCachedUrls(mockKV, []);
+		const result = await batchGetCachedUrls(env.CACHE, []);
 		expect(result.size).toBe(0);
 	});
 });

@@ -2,7 +2,6 @@
 	"compilerOptions": {
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx",
-		/* Base Options: */
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"target": "es2022",
@@ -10,18 +9,21 @@
 		"allowJs": true,
 		"resolveJsonModule": true,
 		"moduleDetection": "force",
-		/* Strictness */
 		"noImplicitAny": false,
 		"noImplicitThis": true,
 		"strictNullChecks": false,
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
-		/* If NOT transpiling with TypeScript: */
 		"moduleResolution": "Bundler",
 		"module": "es2022",
 		"noEmit": true,
 		"lib": ["DOM", "es2022"],
-		"types": ["@types/node", "@cloudflare/workers-types/experimental"]
+		"types": [
+			"@types/node",
+			"@cloudflare/workers-types/experimental",
+			"@cloudflare/vitest-pool-workers"
+		]
 	},
-	"include": ["src"]
+	"include": ["./**/*.ts", "../src/**/*.ts"],
+	"exclude": ["../src/**/*.test.ts"]
 }

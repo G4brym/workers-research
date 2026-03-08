@@ -12,7 +12,7 @@ import {
 	questionsSchema,
 	sanitizeString,
 	validateEnvSecrets,
-} from "./config";
+} from "../../src/config";
 
 describe("config constants", () => {
 	test("should have pagination defaults", () => {

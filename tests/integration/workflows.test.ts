@@ -1,67 +1,61 @@
 import { generateObject, generateText } from "ai";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { Env } from "./bindings";
-import { getFallbackModel, getModel, getModelThinking } from "./utils"; // Adjust path as needed
+import type { Env } from "../../src/bindings";
+import {
+	getFallbackModel,
+	getModel,
+	getModelThinking,
+} from "../../src/utils";
 import {
 	deduplicateLearnings,
 	generateSerpQueries,
 	processSerpResult,
 	writeFinalReport,
-} from "./workflows"; // Adjust path
+} from "../../src/workflows";
 
 // Mock the 'ai' module
 vi.mock("ai", () => ({
 	generateObject: vi.fn(),
 	generateText: vi.fn(),
-	// If other exports from 'ai' are needed by the module under test (not directly by tests)
-	// they might need to be mocked here as well, e.g. streamText: vi.fn()
-	// For now, assuming only generateObject and generateText are relevant for workflows.ts
 }));
 
-// Mock the './utils' module
-vi.mock("./utils", () => ({
+// Mock the utils module
+vi.mock("../../src/utils", () => ({
 	getModel: vi.fn(),
 	getFallbackModel: vi.fn(),
 	getModelThinking: vi.fn(),
-	// If there are other non-function exports (like constants) from './utils' that are used
-	// by workflows.ts, they might need to be explicitly provided here too.
-	// Example: SOME_CONSTANT: 'actual_value_if_needed'
-	// For now, assuming only these functions are relevant.
 }));
 
-const mockEnv = {} as Env; // Mock environment object
+// Mock webSearch to avoid loading node-html-markdown (incompatible with workerd)
+vi.mock("../../src/webSearch", () => ({
+	getBrowser: vi.fn(),
+	webSearch: vi.fn(),
+}));
+
+const mockEnv = {} as Env;
 
 describe("processSerpResult with fallback", () => {
 	beforeEach(() => {
-		// Reset mocks before each test
 		vi.resetAllMocks();
 
-		// Default mock implementations
 		(getModel as vi.Mock).mockReturnValue({ id: "gemini-1.5-flash-test" });
 		(getFallbackModel as vi.Mock).mockReturnValue({
 			id: "gemini-2.0-flash-test",
-		}); // Updated
+		});
 		(getModelThinking as vi.Mock).mockReturnValue({
 			id: "gemini-1.5-flash-test-thinking",
 		});
-
-		// Mock RESEARCH_PROMPT as it's called internally
-		// Since it's a simple function returning a string, we can just mock it if needed,
-		// but usually it's fine unless it has side effects or complex logic.
-		// For now, we'll assume its actual implementation is fine for these tests.
 	});
 
 	test("should use fallback model on AI_RetryError and succeed", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
-		const mockFallbackModel = { id: "gemini-2.0-flash-test" }; // Updated
-		// New schema with confidence levels
+		const mockFallbackModel = { id: "gemini-2.0-flash-test" };
 		const mockApiResponse = {
 			learnings: [
 				{ text: "test learning", confidence: "HIGH", sourceIndex: 0 },
 			],
 			followUpQuestions: ["test q"],
 		};
-		// Expected result after formatting
 		const expectedResult = {
 			learnings: ["[HIGH] test learning [Source: test.com]"],
 			followUpQuestions: ["test q"],
@@ -72,7 +66,6 @@ describe("processSerpResult with fallback", () => {
 
 		(generateObject as vi.Mock)
 			.mockImplementationOnce(async (options) => {
-				// console.log('generateObject mock call 1, model:', options.model.id);
 				if (options.model.id === mockPrimaryModel.id) {
 					const error = new Error("You exceeded your current quota.");
 					error.name = "AI_RetryError";
@@ -83,7 +76,6 @@ describe("processSerpResult with fallback", () => {
 				);
 			})
 			.mockImplementationOnce(async (options) => {
-				// console.log('generateObject mock call 2, model:', options.model.id);
 				if (options.model.id === mockFallbackModel.id) {
 					return { object: mockApiResponse };
 				}
@@ -112,7 +104,7 @@ describe("processSerpResult with fallback", () => {
 
 	test("should re-throw error if fallback model also fails with AI_RetryError", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
-		const mockFallbackModel = { id: "gemini-2.0-flash-test" }; // Updated
+		const mockFallbackModel = { id: "gemini-2.0-flash-test" };
 		const retryError = new Error("You exceeded your current quota again.");
 		retryError.name = "AI_RetryError";
 
@@ -178,7 +170,6 @@ describe("processSerpResult with fallback", () => {
 
 	test("should succeed on first try without fallback", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
-		// New schema with confidence levels
 		const mockApiResponse = {
 			learnings: [
 				{
@@ -189,7 +180,6 @@ describe("processSerpResult with fallback", () => {
 			],
 			followUpQuestions: ["successful q"],
 		};
-		// Expected result after formatting
 		const expectedResult = {
 			learnings: ["[MEDIUM] successful learning [Source: test-success.com]"],
 			followUpQuestions: ["successful q"],
@@ -218,25 +208,22 @@ describe("processSerpResult with fallback", () => {
 		);
 		expect(result).toEqual(expectedResult);
 	});
-
-	// Similar tests could be added for generateSerpQueries and writeFinalReport
-	// For generateSerpQueries, the response structure is different (res.object.queries)
-	// For writeFinalReport, it uses generateText and res.text
 });
 
-// Example structure for generateSerpQueries tests (if needed)
 describe("generateSerpQueries with fallback", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
-		(getModel as vi.Mock).mockReturnValue({ id: "gemini-1.5-flash-test-serp" });
+		(getModel as vi.Mock).mockReturnValue({
+			id: "gemini-1.5-flash-test-serp",
+		});
 		(getFallbackModel as vi.Mock).mockReturnValue({
 			id: "gemini-2.0-flash-test",
-		}); // Updated
+		});
 	});
 
 	test("should use fallback model for generateSerpQueries on AI_RetryError and succeed", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test-serp" };
-		const mockFallbackModel = { id: "gemini-2.0-flash-test" }; // Updated
+		const mockFallbackModel = { id: "gemini-2.0-flash-test" };
 		const mockSuccessResponse = {
 			queries: [{ query: "q1", researchGoal: "g1" }],
 		};
@@ -278,7 +265,6 @@ describe("generateSerpQueries with fallback", () => {
 	});
 });
 
-// Example structure for writeFinalReport tests (if needed)
 describe("writeFinalReport with fallback", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -287,14 +273,13 @@ describe("writeFinalReport with fallback", () => {
 		});
 		(getFallbackModel as vi.Mock).mockReturnValue({
 			id: "gemini-2.0-flash-test",
-		}); // Updated
+		});
 	});
 
 	test("should use fallback model for writeFinalReport on AI_RetryError and succeed", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test-report" };
-		const mockFallbackModel = { id: "gemini-2.0-flash-test" }; // Updated
+		const mockFallbackModel = { id: "gemini-2.0-flash-test" };
 		const mockSuccessText = "This is the final report.";
-		// Note: writeFinalReport appends a sources section. We need to account for that.
 		const expectedReport = `${mockSuccessText}\n\n\n\n## Sources\n\n- url1.com\n- url2.com`;
 
 		(getModelThinking as vi.Mock).mockReturnValue(mockPrimaryModel);
@@ -327,11 +312,11 @@ describe("writeFinalReport with fallback", () => {
 			env: mockEnv,
 			prompt: "report test prompt",
 			learnings: ["learning 1"],
-			visitedUrls: ["url1.com", "url2.com", "url1.com"], // Test deduplication
+			visitedUrls: ["url1.com", "url2.com", "url1.com"],
 		});
 
 		expect(getModelThinking).toHaveBeenCalledTimes(1);
-		expect(getFallbackModel).toHaveBeenCalledTimes(1); // getFallbackModel is called by writeFinalReport
+		expect(getFallbackModel).toHaveBeenCalledTimes(1);
 		expect(generateText).toHaveBeenCalledTimes(2);
 		expect((generateText as vi.Mock).mock.calls[0][0].model).toEqual(
 			mockPrimaryModel,
@@ -343,7 +328,6 @@ describe("writeFinalReport with fallback", () => {
 	});
 });
 
-// Tests for deduplicateLearnings
 describe("deduplicateLearnings", () => {
 	test("should remove exact duplicates", () => {
 		const learnings = [
@@ -356,7 +340,9 @@ describe("deduplicateLearnings", () => {
 
 		expect(result).toHaveLength(2);
 		expect(result).toContain("[HIGH] Learning about AI [Source: ai.com]");
-		expect(result).toContain("[MEDIUM] Different learning [Source: diff.com]");
+		expect(result).toContain(
+			"[MEDIUM] Different learning [Source: diff.com]",
+		);
 	});
 
 	test("should remove semantically similar learnings", () => {
@@ -368,7 +354,6 @@ describe("deduplicateLearnings", () => {
 
 		const result = deduplicateLearnings(learnings);
 
-		// Should keep the first occurrence and the quantum computing one
 		expect(result).toHaveLength(2);
 		expect(result).toContain(
 			"[HIGH] Machine learning is a subset of artificial intelligence [Source: ml.com]",
@@ -402,7 +387,6 @@ describe("deduplicateLearnings", () => {
 	});
 });
 
-// Edge case tests for processSerpResult
 describe("processSerpResult edge cases", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -420,7 +404,9 @@ describe("processSerpResult edge cases", () => {
 		};
 
 		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
-		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+		(generateObject as vi.Mock).mockResolvedValue({
+			object: mockApiResponse,
+		});
 
 		const result = await processSerpResult({
 			env: mockEnv,
@@ -436,12 +422,16 @@ describe("processSerpResult edge cases", () => {
 	test("should handle empty follow-up questions", async () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
 		const mockApiResponse = {
-			learnings: [{ text: "learning", confidence: "HIGH", sourceIndex: 0 }],
+			learnings: [
+				{ text: "learning", confidence: "HIGH", sourceIndex: 0 },
+			],
 			followUpQuestions: [],
 		};
 
 		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
-		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+		(generateObject as vi.Mock).mockResolvedValue({
+			object: mockApiResponse,
+		});
 
 		const result = await processSerpResult({
 			env: mockEnv,
@@ -458,13 +448,15 @@ describe("processSerpResult edge cases", () => {
 		const mockPrimaryModel = { id: "gemini-1.5-flash-test" };
 		const mockApiResponse = {
 			learnings: [
-				{ text: "learning", confidence: "HIGH", sourceIndex: 99 }, // Out of bounds
+				{ text: "learning", confidence: "HIGH", sourceIndex: 99 },
 			],
 			followUpQuestions: [],
 		};
 
 		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
-		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+		(generateObject as vi.Mock).mockResolvedValue({
+			object: mockApiResponse,
+		});
 
 		const result = await processSerpResult({
 			env: mockEnv,
@@ -473,7 +465,6 @@ describe("processSerpResult edge cases", () => {
 			sourceUrls: ["test.com"],
 		});
 
-		// Out of bounds sourceIndex should result in no source info
 		expect(result.learnings[0]).toBe("[HIGH] learning");
 		expect(result.learnings[0]).not.toContain("[Source:");
 	});
@@ -483,14 +474,20 @@ describe("processSerpResult edge cases", () => {
 		const mockApiResponse = {
 			learnings: [
 				{ text: "high confidence", confidence: "HIGH", sourceIndex: 0 },
-				{ text: "medium confidence", confidence: "MEDIUM", sourceIndex: 1 },
+				{
+					text: "medium confidence",
+					confidence: "MEDIUM",
+					sourceIndex: 1,
+				},
 				{ text: "low confidence", confidence: "LOW", sourceIndex: 0 },
 			],
 			followUpQuestions: [],
 		};
 
 		(getModel as vi.Mock).mockReturnValue(mockPrimaryModel);
-		(generateObject as vi.Mock).mockResolvedValue({ object: mockApiResponse });
+		(generateObject as vi.Mock).mockResolvedValue({
+			object: mockApiResponse,
+		});
 
 		const result = await processSerpResult({
 			env: mockEnv,
@@ -506,7 +503,6 @@ describe("processSerpResult edge cases", () => {
 	});
 });
 
-// Tests for writeFinalReport edge cases
 describe("writeFinalReport edge cases", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -536,10 +532,15 @@ describe("writeFinalReport edge cases", () => {
 			env: mockEnv,
 			prompt: "test prompt",
 			learnings: ["learning 1"],
-			visitedUrls: ["url1.com", "url2.com", "url1.com", "url3.com", "url2.com"],
+			visitedUrls: [
+				"url1.com",
+				"url2.com",
+				"url1.com",
+				"url3.com",
+				"url2.com",
+			],
 		});
 
-		// Should only have unique URLs
 		const sourcesSection = result.split("## Sources")[1];
 		const urlCount = (sourcesSection.match(/url1\.com/g) || []).length;
 		expect(urlCount).toBe(1);
@@ -592,7 +593,6 @@ describe("writeFinalReport edge cases", () => {
 		});
 
 		expect(result).toContain("Report content.");
-		// Should NOT have sources section when visitedUrls is empty
 		expect(result).not.toContain("## Sources");
 	});
 });
