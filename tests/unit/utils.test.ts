@@ -1,5 +1,5 @@
-import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
-import { formatDuration, timeAgo } from "./utils";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { formatDuration, timeAgo } from "../../src/utils";
 
 describe("timeAgo", () => {
 	beforeEach(() => {

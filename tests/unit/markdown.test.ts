@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderMarkdownReportContent } from "./markdown";
+import { renderMarkdownReportContent } from "../../src/markdown";
 
 describe("renderMarkdownReportContent", () => {
 	describe("basic rendering", () => {

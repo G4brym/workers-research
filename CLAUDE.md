@@ -57,7 +57,12 @@ Workers-Research is a serverless AI-powered deep research agent built on Cloudfl
 
 ## Testing
 
-Tests use Vitest with mocks for `cloudflare:*` imports located in `src/__mocks__/`. The test configuration aliases all `cloudflare:*` imports to the mock file.
+Tests use `@cloudflare/vitest-pool-workers` to run in the actual Cloudflare Workers runtime via miniflare. Test configuration is in `tests/`:
+- `tests/vitest.config.ts` — uses `defineWorkersConfig` with miniflare bindings
+- `tests/wrangler.toml` — minimal wrangler config for test environment
+- `tests/tsconfig.json` — test-specific TypeScript config
+- `tests/unit/` — pure logic tests (config, markdown, utils)
+- `tests/integration/` — tests using real miniflare bindings (cache/KV, storage/R2, workflows)
 
 ## Code Style
 

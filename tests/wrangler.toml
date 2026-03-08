@@ -1,0 +1,21 @@
+# Minimal wrangler config for test environment
+name = "workers-research-test"
+main = "./test-entry.ts"
+compatibility_date = "2025-01-28"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = ""
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "test-cache-id"
+
+[[r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "test-reports-bucket"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "test-db"
+database_id = "test-db-id"
