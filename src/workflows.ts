@@ -27,7 +27,7 @@ import {
 } from "./prompts";
 import { storeReportWithR2Fallback } from "./storage";
 import type { ResearchType } from "./types";
-import { getFallbackModel, getModel, getModelThinking } from "./utils";
+import { getFallbackModel, getModel, getModelThinking, sleep } from "./utils";
 import { getBrowser, type ResearchBrowser, webSearch } from "./webSearch";
 
 // ============================================
@@ -342,7 +342,9 @@ Source URLs for reference: ${sourceUrls.map((url, i) => `[${i}] ${url}`).join(",
 		};
 	} catch (error) {
 		if (isRateLimitError(error)) {
-			logRateLimitRetry("processSerpResult", query);
+			const delay = getRetryDelay(error);
+			logRateLimitRetry("processSerpResult", query, delay);
+			await sleep(delay);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateObject({
 				model: fallbackModel,
@@ -454,7 +456,9 @@ export async function generateSerpQueries({
 		return res.object.queries.slice(0, numQueries) as QueryResult[];
 	} catch (error) {
 		if (isRateLimitError(error)) {
-			logRateLimitRetry("generateSerpQueries", query);
+			const delay = getRetryDelay(error);
+			logRateLimitRetry("generateSerpQueries", query, delay);
+			await sleep(delay);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateObject({
 				model: fallbackModel,
@@ -512,7 +516,9 @@ Generate the report following the structure outlined in your system prompt.`;
 		text = res.text;
 	} catch (error) {
 		if (isRateLimitError(error)) {
-			logRateLimitRetry("writeFinalReport", prompt);
+			const delay = getRetryDelay(error);
+			logRateLimitRetry("writeFinalReport", prompt, delay);
+			await sleep(delay);
 			const fallbackModel = getFallbackModel(env);
 			const res = await generateText({
 				model: fallbackModel,
@@ -541,16 +547,31 @@ Generate the report following the structure outlined in your system prompt.`;
 // Helper Functions
 // ============================================
 
+const RATE_LIMIT_BACKOFF_MS = 5000;
+
 function isRateLimitError(error: unknown): boolean {
 	if (error instanceof Error) {
 		const message = error.message || "";
 		const lastError = (error as { lastError?: string }).lastError || "";
+		const combined = `${message} ${lastError}`.toLowerCase();
 		return (
-			message.includes("exceeded your current quota") ||
-			lastError.includes("exceeded your current quota")
+			combined.includes("exceeded your current quota") ||
+			combined.includes("too many requests") ||
+			combined.includes("rate limit") ||
+			combined.includes("429")
 		);
 	}
 	return false;
+}
+
+function getRetryDelay(error: unknown): number {
+	if (error instanceof Error) {
+		const retryMatch = error.message.match(/retry in ([\d.]+)s/i);
+		if (retryMatch) {
+			return Math.ceil(Number.parseFloat(retryMatch[1]) * 1000);
+		}
+	}
+	return RATE_LIMIT_BACKOFF_MS;
 }
 
 /**
