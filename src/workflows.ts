@@ -169,8 +169,11 @@ async function deepResearch(
 				visitedUrls: allUrls,
 			});
 
-			allLearnings = [...allLearnings, ...recursiveResult.learnings];
-			allUrls = [...allUrls, ...recursiveResult.visitedUrls];
+			// Replace rather than concatenate: the recursive call already
+			// starts with allLearnings/allUrls as its base, so its result
+			// is a superset. Concatenating would duplicate everything.
+			allLearnings = recursiveResult.learnings;
+			allUrls = recursiveResult.visitedUrls;
 		}
 	}
 
