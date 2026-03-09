@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { buildSearchFilters, formatDuration, normalizeDomain, timeAgo } from "../../src/utils";
+import {
+	buildSearchFilters,
+	formatDuration,
+	normalizeDomain,
+	safeJsonParse,
+	timeAgo,
+} from "../../src/utils";
 
 describe("timeAgo", () => {
 	beforeEach(() => {
@@ -257,5 +263,51 @@ describe("formatDuration", () => {
 
 	test("should format fractional days", () => {
 		expect(formatDuration(129600000)).toBe("1.5 days");
+	});
+});
+
+describe("safeJsonParse", () => {
+	test("should parse valid JSON", () => {
+		expect(safeJsonParse('{"a": 1}', {})).toEqual({ a: 1 });
+	});
+
+	test("should parse valid JSON array", () => {
+		expect(safeJsonParse("[1, 2, 3]", [])).toEqual([1, 2, 3]);
+	});
+
+	test("should parse valid JSON string", () => {
+		expect(safeJsonParse('"hello"', "")).toBe("hello");
+	});
+
+	test("should return fallback for invalid JSON", () => {
+		expect(safeJsonParse("{invalid", [])).toEqual([]);
+	});
+
+	test("should return fallback for empty string", () => {
+		expect(safeJsonParse("", "default")).toBe("default");
+	});
+
+	test("should return fallback for null", () => {
+		expect(safeJsonParse(null, [])).toEqual([]);
+	});
+
+	test("should return fallback for undefined", () => {
+		expect(safeJsonParse(undefined, [])).toEqual([]);
+	});
+
+	test("should return fallback for truncated JSON", () => {
+		expect(safeJsonParse('{"key": "val', {})).toEqual({});
+	});
+
+	test("should parse questions array format used by the app", () => {
+		const json = JSON.stringify([{ question: "Q1", answer: "A1" }]);
+		const result = safeJsonParse(json, []);
+		expect(result).toEqual([{ question: "Q1", answer: "A1" }]);
+	});
+
+	test("should parse string array format used for source_urls", () => {
+		const json = JSON.stringify(["https://example.com", "https://test.com"]);
+		const result = safeJsonParse(json, undefined);
+		expect(result).toEqual(["https://example.com", "https://test.com"]);
 	});
 });
