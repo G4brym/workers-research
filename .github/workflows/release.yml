@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npm test
+
+      - name: Get current version
+        id: pre
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version is already published
+        id: check
+        run: |
+          VERSION="${{ steps.pre.outputs.version }}"
+          if npm view "workers-research@${VERSION}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: ${{ steps.check.outputs.published == 'false' && 'npm publish --provenance --access public' || 'echo Already published, skipping' }}
+          version: npx changeset version
+          title: "chore: version packages"
+          commit: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NODE_AUTH_TOKEN is intentionally omitted — this repo uses npm trusted
+          # publishing (OIDC). Authentication is handled via the id-token permission
+          # and the trusted publishing configuration on npmjs.com.
+
+      - name: Create GitHub Release
+        run: |
+          VERSION=$(jq -r .version package.json)
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping."
+          else
+            BODY=$(awk "/^## ${VERSION}\$/{ found=1; next } /^## /{ if(found) exit } found" CHANGELOG.md)
+            if [ -z "$BODY" ]; then
+              BODY="See [CHANGELOG.md](https://github.com/G4brym/workers-research/blob/main/CHANGELOG.md) for details."
+            fi
+            NOTES_FILE=$(mktemp)
+            printf '%s' "$BODY" > "$NOTES_FILE"
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-file "$NOTES_FILE" \
+              --latest
+            rm -f "$NOTES_FILE"
+            echo "Created release $TAG"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
