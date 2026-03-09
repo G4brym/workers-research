@@ -27,7 +27,7 @@ import {
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
-import { formatDuration, getModel } from "./utils";
+import { formatDuration, getModel, normalizeDomain } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -340,11 +340,11 @@ app.post("/create", async (c) => {
 		.map((url) => url.trim())
 		.filter((url) => url.length > 0 && url.startsWith("http"));
 
-	// Parse excluded domains (one per line)
+	// Parse excluded domains (one per line), normalizing URLs and www prefixes
 	const excludedDomainsRaw = (form.get("excluded_domains") as string) || "";
 	const excluded_domains = excludedDomainsRaw
 		.split("\n")
-		.map((domain) => domain.trim().toLowerCase())
+		.map((domain) => normalizeDomain(domain))
 		.filter((domain) => domain.length > 0);
 
 	const researchData: ResearchType = {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { formatDuration, timeAgo } from "../../src/utils";
+import { formatDuration, normalizeDomain, timeAgo } from "../../src/utils";
 
 describe("timeAgo", () => {
 	beforeEach(() => {
@@ -64,6 +64,70 @@ describe("timeAgo", () => {
 	test("should return 0 seconds for same time", () => {
 		const date = new Date("2025-06-15T12:00:00Z");
 		expect(timeAgo(date)).toBe("0 seconds ago");
+	});
+});
+
+describe("normalizeDomain", () => {
+	test("should return plain domain as-is", () => {
+		expect(normalizeDomain("reddit.com")).toBe("reddit.com");
+	});
+
+	test("should lowercase domain", () => {
+		expect(normalizeDomain("Reddit.COM")).toBe("reddit.com");
+	});
+
+	test("should trim whitespace", () => {
+		expect(normalizeDomain("  reddit.com  ")).toBe("reddit.com");
+	});
+
+	test("should extract hostname from https URL", () => {
+		expect(normalizeDomain("https://reddit.com")).toBe("reddit.com");
+	});
+
+	test("should extract hostname from http URL", () => {
+		expect(normalizeDomain("http://reddit.com")).toBe("reddit.com");
+	});
+
+	test("should strip path from URL", () => {
+		expect(normalizeDomain("https://reddit.com/r/programming")).toBe(
+			"reddit.com",
+		);
+	});
+
+	test("should strip query string from URL", () => {
+		expect(normalizeDomain("https://reddit.com?ref=home")).toBe("reddit.com");
+	});
+
+	test("should strip www. prefix from plain domain", () => {
+		expect(normalizeDomain("www.reddit.com")).toBe("reddit.com");
+	});
+
+	test("should strip www. prefix from URL", () => {
+		expect(normalizeDomain("https://www.reddit.com")).toBe("reddit.com");
+	});
+
+	test("should handle combined URL with www and path", () => {
+		expect(normalizeDomain("https://www.reddit.com/r/foo")).toBe("reddit.com");
+	});
+
+	test("should return empty string for empty input", () => {
+		expect(normalizeDomain("")).toBe("");
+	});
+
+	test("should return empty string for whitespace-only input", () => {
+		expect(normalizeDomain("   ")).toBe("");
+	});
+
+	test("should strip path from plain domain input", () => {
+		expect(normalizeDomain("reddit.com/r/programming")).toBe("reddit.com");
+	});
+
+	test("should handle subdomain without stripping", () => {
+		expect(normalizeDomain("old.reddit.com")).toBe("old.reddit.com");
+	});
+
+	test("should handle malformed URL gracefully", () => {
+		expect(normalizeDomain("https://")).toBe("");
 	});
 });
 
