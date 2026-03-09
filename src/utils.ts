@@ -70,6 +70,37 @@ export async function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Normalize a domain input for excluded domain matching.
+ * Handles common user input formats:
+ * - Full URLs: "https://reddit.com/foo" → "reddit.com"
+ * - www prefix: "www.reddit.com" → "reddit.com"
+ * - Mixed: "https://www.reddit.com" → "reddit.com"
+ * - Plain domains are returned as-is (lowercased, trimmed)
+ */
+export function normalizeDomain(input: string): string {
+	let domain = input.trim().toLowerCase();
+	if (domain.length === 0) return "";
+
+	// If it looks like a URL (has ://), extract the hostname
+	if (domain.includes("://")) {
+		try {
+			domain = new URL(domain).hostname;
+		} catch {
+			// If URL parsing fails, strip the protocol manually
+			domain = domain.replace(/^[a-z]+:\/\//, "").split("/")[0];
+		}
+	} else {
+		// Strip any trailing path from plain domain input
+		domain = domain.split("/")[0];
+	}
+
+	// Strip www. prefix for consistent matching
+	domain = domain.replace(/^www\./, "");
+
+	return domain;
+}
+
 export function formatDuration(ms: number): string {
 	// Handle negative or zero values
 	if (ms <= 0) {

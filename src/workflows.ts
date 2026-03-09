@@ -220,7 +220,9 @@ function createWebSearchStrategy(
 			if (excludedDomains && excludedDomains.length > 0) {
 				const filtered = results.filter((result) => {
 					try {
-						const domain = new URL(result.url).hostname.toLowerCase();
+						const domain = new URL(result.url).hostname
+							.toLowerCase()
+							.replace(/^www\./, "");
 						return !excludedDomains.some(
 							(excluded) =>
 								domain === excluded || domain.endsWith(`.${excluded}`),
