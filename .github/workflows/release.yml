@@ -59,6 +59,7 @@ jobs:
           # and the trusted publishing configuration on npmjs.com.
 
       - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
         run: |
           VERSION=$(jq -r .version package.json)
           TAG="v${VERSION}"
