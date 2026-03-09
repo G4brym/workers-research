@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { formatDuration, normalizeDomain, timeAgo } from "../../src/utils";
+import { buildSearchFilters, formatDuration, normalizeDomain, timeAgo } from "../../src/utils";
 
 describe("timeAgo", () => {
 	beforeEach(() => {
@@ -128,6 +128,93 @@ describe("normalizeDomain", () => {
 
 	test("should handle malformed URL gracefully", () => {
 		expect(normalizeDomain("https://")).toBe("");
+	});
+});
+
+describe("buildSearchFilters", () => {
+	test("should return empty conditions and params when no filters provided", () => {
+		const result = buildSearchFilters();
+		expect(result.conditions).toEqual([]);
+		expect(result.params).toEqual([]);
+	});
+
+	test("should return empty conditions for empty query string", () => {
+		const result = buildSearchFilters("", undefined);
+		expect(result.conditions).toEqual([]);
+		expect(result.params).toEqual([]);
+	});
+
+	test("should return empty conditions for whitespace-only query", () => {
+		const result = buildSearchFilters("   ", undefined);
+		expect(result.conditions).toEqual([]);
+		expect(result.params).toEqual([]);
+	});
+
+	test("should build parameterized LIKE condition for search query", () => {
+		const result = buildSearchFilters("test search", undefined);
+		expect(result.conditions).toEqual(["(title LIKE ? OR query LIKE ?)"]);
+		expect(result.params).toEqual(["%test search%", "%test search%"]);
+	});
+
+	test("should trim search query whitespace", () => {
+		const result = buildSearchFilters("  hello  ", undefined);
+		expect(result.conditions).toEqual(["(title LIKE ? OR query LIKE ?)"]);
+		expect(result.params).toEqual(["%hello%", "%hello%"]);
+	});
+
+	test("should build parameterized status condition for valid status", () => {
+		const result = buildSearchFilters(undefined, "1");
+		expect(result.conditions).toEqual(["status = ?"]);
+		expect(result.params).toEqual([1]);
+	});
+
+	test("should accept all valid status values (1, 2, 3)", () => {
+		for (const s of ["1", "2", "3"]) {
+			const result = buildSearchFilters(undefined, s);
+			expect(result.conditions).toEqual(["status = ?"]);
+			expect(result.params).toEqual([Number.parseInt(s, 10)]);
+		}
+	});
+
+	test("should ignore invalid status values", () => {
+		const result = buildSearchFilters(undefined, "4");
+		expect(result.conditions).toEqual([]);
+		expect(result.params).toEqual([]);
+	});
+
+	test("should ignore SQL injection attempts in status parameter", () => {
+		const result = buildSearchFilters(undefined, "1 OR 1=1");
+		expect(result.conditions).toEqual([]);
+		expect(result.params).toEqual([]);
+	});
+
+	test("should combine search and status filters", () => {
+		const result = buildSearchFilters("test", "2");
+		expect(result.conditions).toEqual([
+			"(title LIKE ? OR query LIKE ?)",
+			"status = ?",
+		]);
+		expect(result.params).toEqual(["%test%", "%test%", 2]);
+	});
+
+	test("should safely parameterize SQL injection attempts in search query", () => {
+		const result = buildSearchFilters(
+			"'; DROP TABLE researches; --",
+			undefined,
+		);
+		expect(result.conditions).toEqual(["(title LIKE ? OR query LIKE ?)"]);
+		// Malicious input is safely passed as a parameter, never interpolated into SQL
+		expect(result.params).toEqual([
+			"%'; DROP TABLE researches; --%",
+			"%'; DROP TABLE researches; --%",
+		]);
+		// Conditions should never contain the raw search term
+		expect(result.conditions[0]).not.toContain("DROP TABLE");
+	});
+
+	test("should handle special SQL characters in search query as parameters", () => {
+		const result = buildSearchFilters("100% complete", undefined);
+		expect(result.params).toEqual(["%100% complete%", "%100% complete%"]);
 	});
 });
 
