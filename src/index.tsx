@@ -27,7 +27,7 @@ import {
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
-import { formatDuration, getModel, normalizeDomain } from "./utils";
+import { buildSearchFilters, formatDuration, getModel, normalizeDomain } from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -141,18 +141,8 @@ app.get("/", async (c) => {
 	const pageSize = 5; // Items per page
 	const offset = (Number.parseInt(page, 10) - 1) * pageSize;
 
-	// Build where conditions
-	const conditions: string[] = [];
-	if (q?.trim()) {
-		// Search in title and query fields (escape single quotes to prevent SQL injection)
-		const searchTerm = q.trim().replace(/'/g, "''");
-		conditions.push(
-			`(title LIKE '%${searchTerm}%' OR query LIKE '%${searchTerm}%')`,
-		);
-	}
-	if (status && ["1", "2", "3"].includes(status)) {
-		conditions.push(`status = ${status}`);
-	}
+	// Build parameterized where conditions to prevent SQL injection
+	const { conditions, params: whereParams } = buildSearchFilters(q, status);
 
 	// Build sort order
 	let orderBy = "created_at desc nulls last";
@@ -177,7 +167,7 @@ app.get("/", async (c) => {
 	let queryBuilder = qb.select<ResearchTypeDB>("researches").orderBy(orderBy);
 
 	if (conditions.length > 0) {
-		queryBuilder = queryBuilder.where(conditions.join(" AND "));
+		queryBuilder = queryBuilder.where(conditions, whereParams);
 	}
 
 	// Fetch paginated results
@@ -186,7 +176,7 @@ app.get("/", async (c) => {
 	// Fetch total count for pagination (with filters)
 	let countQuery = qb.select<ResearchTypeDB>("researches");
 	if (conditions.length > 0) {
-		countQuery = countQuery.where(conditions.join(" AND "));
+		countQuery = countQuery.where(conditions, whereParams);
 	}
 	const totalCount = (await countQuery.count()).results.total;
 

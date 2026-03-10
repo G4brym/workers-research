@@ -101,6 +101,31 @@ export function normalizeDomain(input: string): string {
 	return domain;
 }
 
+/**
+ * Build parameterized search filter conditions for research list queries.
+ * Uses parameterized queries to prevent SQL injection.
+ */
+export function buildSearchFilters(
+	q?: string,
+	status?: string,
+): { conditions: string[]; params: (string | number)[] } {
+	const conditions: string[] = [];
+	const params: (string | number)[] = [];
+
+	if (q?.trim()) {
+		const searchTerm = `%${q.trim()}%`;
+		conditions.push("(title LIKE ? OR query LIKE ?)");
+		params.push(searchTerm, searchTerm);
+	}
+
+	if (status && ["1", "2", "3"].includes(status)) {
+		conditions.push("status = ?");
+		params.push(Number.parseInt(status, 10));
+	}
+
+	return { conditions, params };
+}
+
 export function formatDuration(ms: number): string {
 	// Handle negative or zero values
 	if (ms <= 0) {
