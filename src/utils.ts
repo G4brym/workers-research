@@ -126,6 +126,20 @@ export function buildSearchFilters(
 	return { conditions, params };
 }
 
+export function safeJsonParse<T>(
+	json: string | undefined | null,
+	fallback: T,
+): T {
+	if (json == null) {
+		return fallback;
+	}
+	try {
+		return JSON.parse(json) as T;
+	} catch {
+		return fallback;
+	}
+}
+
 export function formatDuration(ms: number): string {
 	// Handle negative or zero values
 	if (ms <= 0) {

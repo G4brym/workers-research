@@ -27,7 +27,13 @@ import {
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
-import { buildSearchFilters, formatDuration, getModel, normalizeDomain } from "./utils";
+import {
+	buildSearchFilters,
+	formatDuration,
+	getModel,
+	normalizeDomain,
+	safeJsonParse,
+} from "./utils";
 
 export { ResearchWorkflow } from "./workflows";
 
@@ -441,7 +447,7 @@ app.get("/details/:id", async (c) => {
 
 	const researchProps = {
 		...resp.results,
-		questions: JSON.parse(resp.results.questions as unknown as string),
+		questions: safeJsonParse(resp.results.questions, []),
 		report_html: renderMarkdownReportContent(content),
 		statusHistory: statusHistory,
 		isPartial: partial === "true",
@@ -718,7 +724,7 @@ app.get("/details/:id/download/json", async (c) => {
 		status: research.status,
 		created_at: research.created_at,
 		duration: research.duration,
-		questions: JSON.parse(research.questions as unknown as string),
+		questions: safeJsonParse(research.questions, []),
 		initialLearnings: research.initialLearnings,
 		report: reportContent,
 		metadata: {
@@ -757,10 +763,16 @@ app.post("/re-run", async (c) => {
 
 	// Parse source_urls and excluded_domains from original if they exist
 	const sourceUrls = originalResearch.source_urls
-		? JSON.parse(originalResearch.source_urls)
+		? safeJsonParse<string[] | undefined>(
+				originalResearch.source_urls,
+				undefined,
+			)
 		: undefined;
 	const excludedDomains = originalResearch.excluded_domains
-		? JSON.parse(originalResearch.excluded_domains)
+		? safeJsonParse<string[] | undefined>(
+				originalResearch.excluded_domains,
+				undefined,
+			)
 		: undefined;
 
 	const newResearchData: ResearchType = {
@@ -769,7 +781,7 @@ app.post("/re-run", async (c) => {
 		query: originalResearch.query,
 		depth: originalResearch.depth,
 		breadth: originalResearch.breadth,
-		questions: JSON.parse(originalResearch.questions as unknown as string),
+		questions: safeJsonParse(originalResearch.questions, []),
 		status: 1, // Starting status
 		initialLearnings: originalResearch.initialLearnings || "", // Carry over initial learnings
 		browse_internet: originalResearch.browse_internet === 1,
