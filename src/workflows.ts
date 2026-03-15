@@ -27,7 +27,14 @@ import {
 } from "./prompts";
 import { storeReportWithR2Fallback } from "./storage";
 import type { ResearchType } from "./types";
-import { getFallbackModel, getModel, getModelThinking, sleep } from "./utils";
+import {
+	getFallbackModel,
+	getModel,
+	getModelThinking,
+	getRetryDelay,
+	isRateLimitError,
+	sleep,
+} from "./utils";
 import { getBrowser, type ResearchBrowser, webSearch } from "./webSearch";
 
 // ============================================
@@ -548,33 +555,6 @@ Generate the report following the structure outlined in your system prompt.`;
 // ============================================
 // Helper Functions
 // ============================================
-
-const RATE_LIMIT_BACKOFF_MS = 5000;
-
-function isRateLimitError(error: unknown): boolean {
-	if (error instanceof Error) {
-		const message = error.message || "";
-		const lastError = (error as { lastError?: string }).lastError || "";
-		const combined = `${message} ${lastError}`.toLowerCase();
-		return (
-			combined.includes("exceeded your current quota") ||
-			combined.includes("too many requests") ||
-			combined.includes("rate limit") ||
-			combined.includes("429")
-		);
-	}
-	return false;
-}
-
-function getRetryDelay(error: unknown): number {
-	if (error instanceof Error) {
-		const retryMatch = error.message.match(/retry in ([\d.]+)s/i);
-		if (retryMatch) {
-			return Math.ceil(Number.parseFloat(retryMatch[1]) * 1000);
-		}
-	}
-	return RATE_LIMIT_BACKOFF_MS;
-}
 
 /**
  * Format error messages for user display

@@ -11,6 +11,7 @@
 - **Intuitive Dashboard:** Manage and view research via a Hono/JSX web interface.
 - **Simplified Architecture:** Gemini 2.5's large context window removes the need for prompt compression, enhancing report quality.
 - **AutoRAG Integration:** Allows the system to perform research using Cloudflare AI's AutoRAG feature, which queries against a pre-indexed dataset. This can be used as an alternative or in conjunction with standard web browsing research. The AutoRAG feature is invoked when an `autorag_id` is provided with the research request.
+- **Inline Q&A:** Ask follow-up questions about completed reports, with answers grounded in the report content and saved for future reference.
 
 ## 🚀 Inspiration and Acknowledgements
 
@@ -171,7 +172,12 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
    - Once a research is complete, a "Read" button will appear next to it.
    - Click "Read" to view the generated research report in a nicely formatted HTML page.
 
-5. **Re-run Researches:**
+5. **Ask Follow-up Questions:**
+   - On the research details page of a completed report, scroll to the "Ask a follow-up question" panel.
+   - Type a question about the report (e.g. "What are the main risks identified?" or "Which companies were mentioned most?").
+   - Answers are grounded in the report content and saved for future reference.
+
+6. **Re-run Researches:**
    - If you want to re-run a previous research, click the "🔄" button next to the research entry. This will create a new research based on the same query and parameters.
 
 ## 📊 Performance & Limitations

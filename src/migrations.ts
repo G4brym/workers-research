@@ -131,4 +131,18 @@ export const migrations: Migration[] = [
 		ALTER TABLE researches ADD COLUMN excluded_domains TEXT;
 		`,
 	},
+	{
+		name: "0012_create_research_questions.sql",
+		sql: `
+		CREATE TABLE research_questions (
+		  id TEXT PRIMARY KEY,
+		  research_id TEXT NOT NULL,
+		  question TEXT NOT NULL,
+		  answer TEXT NOT NULL,
+		  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		  FOREIGN KEY (research_id) REFERENCES researches(id) ON DELETE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS idx_research_questions_research_id ON research_questions(research_id);
+		`,
+	},
 ];

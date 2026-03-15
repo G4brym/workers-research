@@ -327,6 +327,46 @@ function toggleDropdown(id) {
 	}
 }
 
+async function submitQuestion(event) {
+	event.preventDefault();
+	const form = event.target;
+	const researchId = form.dataset.researchId;
+	const question = form.querySelector("#qa-question").value.trim();
+	if (!question) return;
+
+	const submitBtn = document.getElementById("qa-submit");
+	const loading = document.getElementById("qa-loading");
+	submitBtn.disabled = true;
+	loading.classList.remove("hidden");
+
+	const errorEl = document.getElementById("qa-error");
+	errorEl.textContent = "";
+	errorEl.classList.add("hidden");
+
+	const formData = new FormData(form);
+	try {
+		const resp = await fetch(`/details/${researchId}/ask`, {
+			method: "POST",
+			body: formData,
+		});
+		if (!resp.ok) {
+			const text = await resp.text();
+			errorEl.textContent = "Error: " + text;
+			errorEl.classList.remove("hidden");
+			return;
+		}
+		const html = await resp.text();
+		const history = document.getElementById("qa-history");
+		const div = document.createElement("div");
+		div.innerHTML = html;
+		history.appendChild(div.firstElementChild);
+		form.querySelector("#qa-question").value = "";
+	} finally {
+		submitBtn.disabled = false;
+		loading.classList.add("hidden");
+	}
+}
+
 function toggleAutoRagDropdown(checked) {
 	const dropdown = document.getElementById("autorag_id_dropdown_container");
 	if (dropdown) {

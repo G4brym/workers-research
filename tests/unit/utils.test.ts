@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	buildSearchFilters,
 	formatDuration,
+	getRetryDelay,
+	isRateLimitError,
 	normalizeDomain,
 	safeJsonParse,
 	timeAgo,
@@ -263,6 +265,66 @@ describe("formatDuration", () => {
 
 	test("should format fractional days", () => {
 		expect(formatDuration(129600000)).toBe("1.5 days");
+	});
+});
+
+describe("isRateLimitError", () => {
+	test("should return true for quota exceeded message", () => {
+		const err = new Error("You exceeded your current quota.");
+		expect(isRateLimitError(err)).toBe(true);
+	});
+
+	test("should return true for too many requests message", () => {
+		const err = new Error("too many requests");
+		expect(isRateLimitError(err)).toBe(true);
+	});
+
+	test("should return true for rate limit message", () => {
+		const err = new Error("Rate limit reached");
+		expect(isRateLimitError(err)).toBe(true);
+	});
+
+	test("should return true for 429 in message", () => {
+		const err = new Error("HTTP 429 error");
+		expect(isRateLimitError(err)).toBe(true);
+	});
+
+	test("should return false for unrelated errors", () => {
+		const err = new Error("Network error");
+		expect(isRateLimitError(err)).toBe(false);
+	});
+
+	test("should return false for non-Error values", () => {
+		expect(isRateLimitError("some string")).toBe(false);
+		expect(isRateLimitError(null)).toBe(false);
+		expect(isRateLimitError(undefined)).toBe(false);
+	});
+
+	test("should be case-insensitive", () => {
+		const err = new Error("RATE LIMIT exceeded");
+		expect(isRateLimitError(err)).toBe(true);
+	});
+});
+
+describe("getRetryDelay", () => {
+	test("should return delay from retry message", () => {
+		const err = new Error("Please retry in 30s after the quota is reset.");
+		expect(getRetryDelay(err)).toBe(30000);
+	});
+
+	test("should return default delay when no retry time in message", () => {
+		const err = new Error("Rate limit exceeded");
+		expect(getRetryDelay(err)).toBe(5000);
+	});
+
+	test("should return default delay for non-Error values", () => {
+		expect(getRetryDelay("not an error")).toBe(5000);
+		expect(getRetryDelay(null)).toBe(5000);
+	});
+
+	test("should handle fractional seconds", () => {
+		const err = new Error("retry in 1.5s");
+		expect(getRetryDelay(err)).toBe(1500);
 	});
 });
 

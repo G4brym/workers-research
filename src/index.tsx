@@ -14,7 +14,11 @@ import {
 } from "./config";
 import { renderMarkdownReportContent, renderPdfDocument } from "./markdown";
 import { migrations } from "./migrations";
-import { FOLLOWUP_QUESTIONS_PROMPT, SUMMARIZE_PROMPT } from "./prompts";
+import {
+	FOLLOWUP_QUESTIONS_PROMPT,
+	REPORT_QA_PROMPT,
+	SUMMARIZE_PROMPT,
+} from "./prompts";
 import { getReportWithR2Resolution } from "./storage";
 import {
 	CloneResearch,
@@ -24,13 +28,16 @@ import {
 	NewResearchQuestions,
 	ResearchDetails,
 	ResearchList,
+	ResearchQAItem,
 	TopBar,
 } from "./templates/layout";
 import type { ResearchType, ResearchTypeDB } from "./types";
 import {
 	buildSearchFilters,
 	formatDuration,
+	getFallbackModel,
 	getModel,
+	isRateLimitError,
 	normalizeDomain,
 	safeJsonParse,
 } from "./utils";
@@ -445,12 +452,35 @@ app.get("/details/:id", async (c) => {
 		statusHistory = historyResult.results || [];
 	}
 
+	let researchQuestions: Array<{
+		question: string;
+		answer_html: string;
+		created_at?: string;
+	}> = [];
+	if (resp.results.status === 2) {
+		const questionsQb = new D1QB(c.env.DB);
+		const questionsResult = await questionsQb
+			.select<{ question: string; answer: string; created_at: string }>(
+				"research_questions",
+			)
+			.where("research_id = ?", id)
+			.orderBy("created_at asc")
+			.all();
+		researchQuestions = (questionsResult.results || []).map((q) => ({
+			question: q.question,
+			answer_html: renderMarkdownReportContent(q.answer),
+			created_at: q.created_at,
+		}));
+	}
+
 	const researchProps = {
 		...resp.results,
 		questions: safeJsonParse(resp.results.questions, []),
 		report_html: renderMarkdownReportContent(content),
 		statusHistory: statusHistory,
 		isPartial: partial === "true",
+		researchQuestions,
+		csrfToken: c.get("csrfToken") ?? "",
 	};
 
 	if (partial === "true") {
@@ -739,6 +769,108 @@ app.get("/details/:id/download/json", async (c) => {
 	headers.set("Content-Disposition", 'attachment; filename="report.json"');
 
 	return new Response(JSON.stringify(exportData, null, 2), { headers });
+});
+
+app.post("/details/:id/ask", async (c) => {
+	const id = c.req.param("id");
+	const form = await c.req.formData();
+	const question = (form.get("question") as string | null)?.trim();
+
+	if (!question || question.length === 0) {
+		throw new HTTPException(400, { message: "Question is required" });
+	}
+	if (question.length > 2000) {
+		throw new HTTPException(400, {
+			message: "Question is too long (max 2000 chars)",
+		});
+	}
+
+	const qb = new D1QB(c.env.DB);
+	const resp = await qb
+		.fetchOne<ResearchTypeDB>({
+			tableName: "researches",
+			where: { conditions: ["id = ?"], params: [id] },
+		})
+		.execute();
+
+	if (!resp.results) {
+		throw new HTTPException(404, { message: "Research not found" });
+	}
+
+	if (resp.results.status !== 2) {
+		throw new HTTPException(400, { message: "Research is not yet complete" });
+	}
+
+	const reportContent = await getReportWithR2Resolution(
+		c.env.REPORTS_BUCKET,
+		id,
+		resp.results.result,
+	);
+
+	if (!reportContent) {
+		throw new HTTPException(400, { message: "Report content not available" });
+	}
+
+	const MAX_QUESTIONS_PER_RESEARCH = 50;
+	const countResult = await qb
+		.fetchOne<{ count: number }>({
+			tableName: "research_questions",
+			fields: "COUNT(*) as count",
+			where: { conditions: ["research_id = ?"], params: [id] },
+		})
+		.execute();
+	if ((countResult.results?.count ?? 0) >= MAX_QUESTIONS_PER_RESEARCH) {
+		throw new HTTPException(429, {
+			message: `Maximum ${MAX_QUESTIONS_PER_RESEARCH} questions per research reached`,
+		});
+	}
+
+	let answer: string;
+	try {
+		const result = await generateText({
+			model: getModel(c.env),
+			system: REPORT_QA_PROMPT(),
+			prompt: `Research Report:\n\n${reportContent}\n\n---\n\nUser Question: ${question}`,
+		});
+		answer = result.text;
+	} catch (err) {
+		if (isRateLimitError(err)) {
+			throw new HTTPException(429, {
+				message: "AI rate limit reached, please try again shortly",
+			});
+		}
+		try {
+			const result = await generateText({
+				model: getFallbackModel(c.env),
+				system: REPORT_QA_PROMPT(),
+				prompt: `Research Report:\n\n${reportContent}\n\n---\n\nUser Question: ${question}`,
+			});
+			answer = result.text;
+		} catch (fallbackErr) {
+			if (isRateLimitError(fallbackErr)) {
+				throw new HTTPException(429, {
+					message: "AI rate limit reached, please try again shortly",
+				});
+			}
+			throw new HTTPException(500, { message: "Failed to generate answer" });
+		}
+	}
+
+	const questionId = crypto.randomUUID();
+	await qb
+		.insert({
+			tableName: "research_questions",
+			data: { id: questionId, research_id: id, question, answer },
+		})
+		.execute();
+
+	return c.html(
+		<ResearchQAItem
+			question={question}
+			answer_html={renderMarkdownReportContent(answer)}
+			createdAt={new Date().toISOString()}
+		/>,
+	);
 });
 
 app.post("/re-run", async (c) => {
