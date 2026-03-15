@@ -19,13 +19,17 @@ vi.mock("ai", () => ({
 	generateText: vi.fn(),
 }));
 
-// Mock the utils module
-vi.mock("../../src/utils", () => ({
-	getModel: vi.fn(),
-	getFallbackModel: vi.fn(),
-	getModelThinking: vi.fn(),
-	sleep: vi.fn().mockResolvedValue(undefined),
-}));
+// Mock the utils module, keeping non-mocked exports (isRateLimitError, getRetryDelay, etc.)
+vi.mock("../../src/utils", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../../src/utils")>();
+	return {
+		...actual,
+		getModel: vi.fn(),
+		getFallbackModel: vi.fn(),
+		getModelThinking: vi.fn(),
+		sleep: vi.fn().mockResolvedValue(undefined),
+	};
+});
 
 // Mock webSearch to avoid loading node-html-markdown (incompatible with workerd)
 vi.mock("../../src/webSearch", () => ({

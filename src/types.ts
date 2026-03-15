@@ -88,7 +88,7 @@ export interface ResearchQuestion {
 	id: string;
 	research_id: string;
 	question: string;
-	answer: string;
+	answer: string; // raw markdown — use renderMarkdownReportContent() before rendering
 	created_at?: string;
 }
 

@@ -35,7 +35,9 @@ import type { ResearchType, ResearchTypeDB } from "./types";
 import {
 	buildSearchFilters,
 	formatDuration,
+	getFallbackModel,
 	getModel,
+	isRateLimitError,
 	normalizeDomain,
 	safeJsonParse,
 } from "./utils";
@@ -809,11 +811,36 @@ app.post("/details/:id/ask", async (c) => {
 		throw new HTTPException(400, { message: "Report content not available" });
 	}
 
-	const { text: answer } = await generateText({
-		model: getModel(c.env),
-		system: REPORT_QA_PROMPT(),
-		prompt: `Research Report:\n\n${reportContent}\n\n---\n\nUser Question: ${question}`,
-	});
+	let answer: string;
+	try {
+		const result = await generateText({
+			model: getModel(c.env),
+			system: REPORT_QA_PROMPT(),
+			prompt: `Research Report:\n\n${reportContent}\n\n---\n\nUser Question: ${question}`,
+		});
+		answer = result.text;
+	} catch (err) {
+		if (isRateLimitError(err)) {
+			throw new HTTPException(429, {
+				message: "AI rate limit reached, please try again shortly",
+			});
+		}
+		try {
+			const result = await generateText({
+				model: getFallbackModel(c.env),
+				system: REPORT_QA_PROMPT(),
+				prompt: `Research Report:\n\n${reportContent}\n\n---\n\nUser Question: ${question}`,
+			});
+			answer = result.text;
+		} catch (fallbackErr) {
+			if (isRateLimitError(fallbackErr)) {
+				throw new HTTPException(429, {
+					message: "AI rate limit reached, please try again shortly",
+				});
+			}
+			throw new HTTPException(500, { message: "Failed to generate answer" });
+		}
+	}
 
 	const questionId = crypto.randomUUID();
 	await qb

@@ -673,7 +673,8 @@ export const ResearchQA: FC<ResearchQAProps> = ({
 
 			<form
 				id="qa-form"
-				onSubmit={`submitQuestion(event, '${researchId}')`}
+				data-research-id={researchId}
+				onSubmit="submitQuestion(event)"
 				class="space-y-3"
 			>
 				<input type="hidden" name="_csrf" value={csrfToken} />
@@ -698,6 +699,11 @@ export const ResearchQA: FC<ResearchQAProps> = ({
 					</button>
 				</div>
 			</form>
+
+			<div
+				id="qa-error"
+				class="hidden mt-4 text-sm text-red-600 dark:text-red-400 rounded-md bg-red-50 dark:bg-red-900/20 px-3 py-2"
+			/>
 
 			<div
 				id="qa-loading"
