@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.0
+
+### Minor Changes
+
+- [#45](https://github.com/G4brym/workers-research/pull/45) [`c7ae739`](https://github.com/G4brym/workers-research/commit/c7ae739907d5f27980fd56e94331aea83f0c7809) Thanks [@G4brym](https://github.com/G4brym)! - Add inline Q&A panel for completed research reports. Users can now ask follow-up questions about a finished report directly from the details page. Answers are grounded in the report content and saved to D1 for future reference. Also moves `isRateLimitError` and `getRetryDelay` helpers to `utils.ts` for reuse across the app.
+
+### Patch Changes
+
+- [#42](https://github.com/G4brym/workers-research/pull/42) [`b407649`](https://github.com/G4brym/workers-research/commit/b40764908ccdbb4384c5a760be0bcf0423c295d1) Thanks [@G4brym](https://github.com/G4brym)! - Add safeJsonParse utility to prevent 500 errors from malformed database JSON columns. Replaced bare JSON.parse() calls in route handlers with a safe wrapper that returns a fallback value instead of throwing on invalid JSON.
+
+- [#41](https://github.com/G4brym/workers-research/pull/41) [`209444e`](https://github.com/G4brym/workers-research/commit/209444eb61cc564c2d6b43267256f85fe3e5e30e) Thanks [@G4brym](https://github.com/G4brym)! - Fix SQL injection vulnerability in research list search endpoint by replacing string interpolation with parameterized queries using workers-qb's built-in parameter binding.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -8,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - CHANGELOG.md for tracking all changes
 - Database indexes on `status`, `created_at`, and `user` columns for faster queries (migration 0008)
 - Database columns `updated_at` and `deleted_at` for soft delete support (migration 0009)
@@ -51,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Source URLs and excluded domains fields in research creation and clone forms
 
 ### Changed
+
 - Unified `deepResearch` and `deepResearchAutoRAG` functions using strategy pattern (reduces code duplication by ~50%)
 - Replaced magic numbers with centralized config values from `src/config.ts`
 - Improved type safety: removed `any` types, added proper error type guards
@@ -72,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded @types/node from v22.15 to v25.0
 
 ### Fixed
+
 - Fixed D1 migration error with `DEFAULT CURRENT_TIMESTAMP` in ALTER TABLE (not allowed by SQLite)
 - Fixed research intensity presets (Quick/Standard/Thorough) not responding to clicks
 - Fixed download report dropdown not opening
@@ -79,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed JavaScript functions with incorrect underscore prefixes causing onclick handlers to fail
 
 ### Security
+
 - Fixed XSS vulnerability by adding HTML sanitization with `sanitize-html` in markdown rendering
 - Added CSRF tokens to all forms and HTMX requests
 - Added input validation with Zod schemas for query, depth, breadth parameters
