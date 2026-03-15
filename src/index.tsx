@@ -811,6 +811,20 @@ app.post("/details/:id/ask", async (c) => {
 		throw new HTTPException(400, { message: "Report content not available" });
 	}
 
+	const MAX_QUESTIONS_PER_RESEARCH = 50;
+	const countResult = await qb
+		.fetchOne<{ count: number }>({
+			tableName: "research_questions",
+			fields: "COUNT(*) as count",
+			where: { conditions: ["research_id = ?"], params: [id] },
+		})
+		.execute();
+	if ((countResult.results?.count ?? 0) >= MAX_QUESTIONS_PER_RESEARCH) {
+		throw new HTTPException(429, {
+			message: `Maximum ${MAX_QUESTIONS_PER_RESEARCH} questions per research reached`,
+		});
+	}
+
 	let answer: string;
 	try {
 		const result = await generateText({

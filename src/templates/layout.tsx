@@ -632,7 +632,7 @@ export const ResearchQAItem: FC<ResearchQAItemProps> = ({
 			</div>
 			{createdAt && (
 				<p class="text-xs text-gray-400 dark:text-gray-500 text-right">
-					{new Date(createdAt).toLocaleString()}
+					{createdAt.slice(0, 16).replace("T", " ")} UTC
 				</p>
 			)}
 		</div>
