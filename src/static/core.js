@@ -327,6 +327,40 @@ function toggleDropdown(id) {
 	}
 }
 
+async function submitQuestion(event, researchId) {
+	event.preventDefault();
+	const form = event.target;
+	const question = form.querySelector("#qa-question").value.trim();
+	if (!question) return;
+
+	const submitBtn = document.getElementById("qa-submit");
+	const loading = document.getElementById("qa-loading");
+	submitBtn.disabled = true;
+	loading.classList.remove("hidden");
+
+	const formData = new FormData(form);
+	try {
+		const resp = await fetch(`/details/${researchId}/ask`, {
+			method: "POST",
+			body: formData,
+		});
+		if (!resp.ok) {
+			const text = await resp.text();
+			alert("Error: " + text);
+			return;
+		}
+		const html = await resp.text();
+		const history = document.getElementById("qa-history");
+		const div = document.createElement("div");
+		div.innerHTML = html;
+		history.appendChild(div.firstChild);
+		form.querySelector("#qa-question").value = "";
+	} finally {
+		submitBtn.disabled = false;
+		loading.classList.add("hidden");
+	}
+}
+
 function toggleAutoRagDropdown(checked) {
 	const dropdown = document.getElementById("autorag_id_dropdown_container");
 	if (dropdown) {

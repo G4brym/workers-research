@@ -84,6 +84,14 @@ export interface ResearchStatusHistory {
 	status_text: string;
 }
 
+export interface ResearchQuestion {
+	id: string;
+	research_id: string;
+	question: string;
+	answer: string;
+	created_at?: string;
+}
+
 // ============================================
 // Learnings with Source Attribution
 // ============================================

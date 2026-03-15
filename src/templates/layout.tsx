@@ -600,6 +600,130 @@ export const ResearchList: FC<ResearchListProps> = (props) => {
 	);
 };
 
+interface ResearchQAItemProps {
+	question: string;
+	answer_html: string;
+	createdAt?: string;
+}
+
+export const ResearchQAItem: FC<ResearchQAItemProps> = ({
+	question,
+	answer_html,
+	createdAt,
+}) => {
+	return (
+		<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+			<div class="flex items-start gap-2">
+				<span class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mt-0.5">
+					Q
+				</span>
+				<p class="text-sm font-medium text-gray-900 dark:text-white">
+					{question}
+				</p>
+			</div>
+			<div class="flex items-start gap-2">
+				<span class="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide mt-0.5">
+					A
+				</span>
+				<div
+					class="text-sm text-gray-700 dark:text-gray-300 prose prose-sm dark:prose-invert max-w-none"
+					dangerouslySetInnerHTML={{ __html: answer_html }}
+				/>
+			</div>
+			{createdAt && (
+				<p class="text-xs text-gray-400 dark:text-gray-500 text-right">
+					{new Date(createdAt).toLocaleString()}
+				</p>
+			)}
+		</div>
+	);
+};
+
+interface ResearchQAProps {
+	researchId: string;
+	questions: Array<{
+		question: string;
+		answer_html: string;
+		created_at?: string;
+	}>;
+	csrfToken: string;
+}
+
+export const ResearchQA: FC<ResearchQAProps> = ({
+	researchId,
+	questions,
+	csrfToken,
+}) => {
+	return (
+		<section class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+			<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+				Ask a follow-up question
+			</h2>
+
+			<div id="qa-history" class="space-y-4 mb-6">
+				{questions.map((q, i) => (
+					<ResearchQAItem
+						key={String(i)}
+						question={q.question}
+						answer_html={q.answer_html}
+						createdAt={q.created_at}
+					/>
+				))}
+			</div>
+
+			<form
+				id="qa-form"
+				onSubmit={`submitQuestion(event, '${researchId}')`}
+				class="space-y-3"
+			>
+				<input type="hidden" name="_csrf" value={csrfToken} />
+				<textarea
+					name="question"
+					id="qa-question"
+					rows={3}
+					placeholder="Ask a question about this research report..."
+					maxLength={2000}
+					class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+				/>
+				<div class="flex items-center justify-between">
+					<p class="text-xs text-gray-500 dark:text-gray-400">
+						Answers are grounded in the report content.
+					</p>
+					<button
+						type="submit"
+						id="qa-submit"
+						class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+					>
+						Ask
+					</button>
+				</div>
+			</form>
+
+			<div
+				id="qa-loading"
+				class="hidden mt-4 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2"
+			>
+				<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+					<circle
+						class="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						stroke-width="4"
+					/>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8v8H4z"
+					/>
+				</svg>
+				Asking Gemini...
+			</div>
+		</section>
+	);
+};
+
 export const ResearchDetails: FC = (props) => {
 	const researchData = props.research;
 	const mainId = `research-details-main-${researchData.id}`;
@@ -865,6 +989,14 @@ export const ResearchDetails: FC = (props) => {
 						{html(researchData.report_html)}
 					</div>
 				</div>
+			)}
+
+			{researchData.status === 2 && (
+				<ResearchQA
+					researchId={researchData.id}
+					questions={researchData.researchQuestions || []}
+					csrfToken={researchData.csrfToken || ""}
+				/>
 			)}
 		</main>
 	);
