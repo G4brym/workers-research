@@ -1,4 +1,5 @@
 import puppeteer, { type Browser } from "@cloudflare/puppeteer";
+import { tavily } from "@tavily/core";
 import { NodeHtmlMarkdown } from "node-html-markdown";
 import type { Env } from "./bindings";
 import {
@@ -8,6 +9,7 @@ import {
 	setCachedSearchResults,
 	setCachedUrlContent,
 } from "./cache";
+import { config } from "./config";
 import { sleep } from "./utils";
 
 export type SearchResult = {
@@ -194,6 +196,33 @@ export async function webSearch(
 	}
 
 	return await Promise.all(promises);
+}
+
+export interface TavilySearchOptions {
+	excludedDomains?: string[];
+}
+
+export async function tavilySearch(
+	apiKey: string,
+	query: string,
+	limit: number,
+	options?: TavilySearchOptions,
+): Promise<SearchResult[]> {
+	const client = tavily({ apiKey });
+	const response = await client.search(query, {
+		maxResults: limit,
+		searchDepth: config.tavilySearch.searchDepth,
+		includeRawContent: "markdown",
+		excludeDomains: options?.excludedDomains,
+	});
+
+	return response.results.map((result) => ({
+		title: result.title || "",
+		description: result.content || "",
+		url: result.url,
+		markdown: result.rawContent || result.content || "",
+		links: [],
+	}));
 }
 
 /**

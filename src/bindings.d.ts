@@ -12,6 +12,7 @@ export type Env = {
 	AI: Ai;
 	CACHE?: KVNamespace;
 	REPORTS_BUCKET?: R2Bucket;
+	TAVILY_API_KEY?: string;
 };
 
 export type Variables = {
