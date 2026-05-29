@@ -35,14 +35,19 @@ import {
 	isRateLimitError,
 	sleep,
 } from "./utils";
-import { getBrowser, type ResearchBrowser, webSearch } from "./webSearch";
+import {
+	getBrowser,
+	type ResearchBrowser,
+	tavilySearch,
+	webSearch,
+} from "./webSearch";
 
 // ============================================
 // Types for unified research
 // ============================================
 
 interface SearchStrategy {
-	name: "web" | "autorag";
+	name: "web" | "autorag" | "tavily";
 	search: (query: string) => Promise<SearchStrategyResult | null>;
 	formatUrls: (result: SearchStrategyResult) => string[];
 	formatContent: (result: SearchStrategyResult) => string[];
@@ -273,6 +278,39 @@ function createAutoRAGSearchStrategy(autorag: AutoRAG): SearchStrategy {
 			return data.map((item) =>
 				item.content.map((c) => c.text).join("\n\n-----\n\n"),
 			);
+		},
+	};
+}
+
+function createTavilySearchStrategy(
+	apiKey: string,
+	qb: D1QB,
+	researchId: string,
+	excludedDomains?: string[],
+): SearchStrategy {
+	return {
+		name: "tavily",
+		search: async (query: string) => {
+			await addResearchStatusHistoryEntry(
+				qb,
+				researchId,
+				`Tavily search for: ${query}`,
+			);
+			const results = await tavilySearch(
+				apiKey,
+				query,
+				config.webSearch.resultsLimit,
+				{ excludedDomains },
+			);
+			return { data: results };
+		},
+		formatUrls: (result) => {
+			const data = result.data as Array<{ url: string }>;
+			return data.map((item) => item.url).filter(Boolean);
+		},
+		formatContent: (result) => {
+			const data = result.data as Array<{ markdown: string }>;
+			return data.map((item) => item.markdown);
 		},
 	};
 }
@@ -730,20 +768,36 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 
 			// Web research
 			if (event.payload.browse_internet) {
-				logger.info("Starting web research", { researchId: id });
 				const excludedDomains = event.payload.excluded_domains ?? [];
-				const webStrategy = createWebSearchStrategy(
-					browser,
-					qb,
-					id,
-					this.env.CACHE,
-					excludedDomains,
-				);
+
+				// Use Tavily when API key is available, otherwise fall back to DuckDuckGo+Puppeteer
+				const strategy = this.env.TAVILY_API_KEY
+					? (() => {
+							logger.info("Starting Tavily web research", {
+								researchId: id,
+							});
+							return createTavilySearchStrategy(
+								this.env.TAVILY_API_KEY,
+								qb,
+								id,
+								excludedDomains,
+							);
+						})()
+					: (() => {
+							logger.info("Starting web research", { researchId: id });
+							return createWebSearchStrategy(
+								browser,
+								qb,
+								id,
+								this.env.CACHE,
+								excludedDomains,
+							);
+						})();
 
 				const researchResult = await deepResearch({
 					step,
 					env: this.env,
-					strategy: webStrategy,
+					strategy,
 					query: fullQuery,
 					breadth: parsedBreadth,
 					depth: parsedDepth,

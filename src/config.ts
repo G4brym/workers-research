@@ -31,6 +31,12 @@ export const config = {
 		maxConcurrentRequests: 5,
 	},
 
+	// Tavily search
+	tavilySearch: {
+		maxResults: 5,
+		searchDepth: "advanced" as "basic" | "advanced",
+	},
+
 	// Polling intervals (ms)
 	polling: {
 		researchList: 10000,

@@ -44,6 +44,7 @@
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.13",
 		"@cloudflare/puppeteer": "^1.0.5",
+		"@tavily/core": "^0.7.3",
 		"@types/sanitize-html": "^2.16.0",
 		"ai": "^6.0.49",
 		"hono": "^4.11.5",

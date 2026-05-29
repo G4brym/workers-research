@@ -169,7 +169,7 @@ export function logResearchError(researchId: string, error: Error): void {
 export function logSearchStart(
 	researchId: string,
 	query: string,
-	source: "web" | "autorag",
+	source: "web" | "autorag" | "tavily",
 ): void {
 	logger.info(`Starting ${source} search`, {
 		researchId,
@@ -180,7 +180,7 @@ export function logSearchStart(
 
 export function logSearchComplete(
 	researchId: string,
-	source: "web" | "autorag",
+	source: "web" | "autorag" | "tavily",
 	urlCount: number,
 	durationMs: number,
 ): void {
@@ -194,7 +194,7 @@ export function logSearchComplete(
 
 export function logSearchError(
 	researchId: string,
-	source: "web" | "autorag",
+	source: "web" | "autorag" | "tavily",
 	query: string,
 	error: Error,
 ): void {
