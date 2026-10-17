@@ -20,6 +20,7 @@ import {
 	logSearchError,
 	logSearchStart,
 } from "./logger";
+import { getWebSearchProvider, parallelSearch } from "./parallelSearch";
 import {
 	FINAL_REPORT_PROMPT,
 	LEARNING_EXTRACTION_PROMPT,
@@ -43,7 +44,10 @@ import { getBrowser, type ResearchBrowser, webSearch } from "./webSearch";
 
 interface SearchStrategy {
 	name: "web" | "autorag";
-	search: (query: string) => Promise<SearchStrategyResult | null>;
+	search: (
+		query: string,
+		signal?: AbortSignal,
+	) => Promise<SearchStrategyResult | null>;
 	formatUrls: (result: SearchStrategyResult) => string[];
 	formatContent: (result: SearchStrategyResult) => string[];
 }
@@ -197,31 +201,39 @@ async function deepResearch(
 // Search Strategy Factories
 // ============================================
 
-function createWebSearchStrategy(
+export function createWebSearchStrategy(
+	env: Env,
 	browser: ResearchBrowser,
 	qb: D1QB,
 	researchId: string,
 	cache?: KVNamespace,
 	excludedDomains?: string[],
 ): SearchStrategy {
+	const provider = getWebSearchProvider(env);
 	return {
 		name: "web",
-		search: async (query: string) => {
-			const results = await webSearch(
-				await browser.getActiveBrowser(),
-				query,
-				config.webSearch.resultsLimit,
-				{
-					logCrawlUrl: async (url: string) => {
-						await addResearchStatusHistoryEntry(
-							qb,
-							researchId,
-							`Crawling URL: ${url}`,
+		search: async (query: string, signal?: AbortSignal) => {
+			const results =
+				provider === "parallel"
+					? await parallelSearch(query, config.webSearch.resultsLimit, {
+							sessionId: researchId,
+							signal,
+						})
+					: await webSearch(
+							await browser.getActiveBrowser(),
+							query,
+							config.webSearch.resultsLimit,
+							{
+								logCrawlUrl: async (url: string) => {
+									await addResearchStatusHistoryEntry(
+										qb,
+										researchId,
+										`Crawling URL: ${url}`,
+									);
+								},
+								cache,
+							},
 						);
-					},
-					cache,
-				},
-			);
 
 			// Filter out excluded domains
 			if (excludedDomains && excludedDomains.length > 0) {
@@ -733,6 +745,7 @@ export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchType> {
 				logger.info("Starting web research", { researchId: id });
 				const excludedDomains = event.payload.excluded_domains ?? [];
 				const webStrategy = createWebSearchStrategy(
+					this.env,
 					browser,
 					qb,
 					id,

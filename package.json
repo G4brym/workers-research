@@ -43,6 +43,7 @@
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.13",
+		"@ai-sdk/mcp": "^1.0.97",
 		"@cloudflare/puppeteer": "^1.0.5",
 		"@types/sanitize-html": "^2.16.0",
 		"ai": "^6.0.49",

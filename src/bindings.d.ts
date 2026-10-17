@@ -8,6 +8,7 @@ export type Env = {
 	AI_GATEWAY_NAME?: string;
 	AI_GATEWAY_ACCOUNT_ID?: string;
 	AI_GATEWAY_API_KEY?: string;
+	WEB_SEARCH_PROVIDER?: "duckduckgo" | "parallel";
 	BROWSER: Fetcher;
 	AI: Ai;
 	CACHE?: KVNamespace;

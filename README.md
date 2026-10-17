@@ -151,6 +151,28 @@ Follow these steps to set up and run `workers-research` on your Cloudflare accou
 8. **Access the Dashboard:**
    Open your deployed worker URL (e.g., `https://workers-research.{your-user}.workers.dev`) in your browser to access the research dashboard.
 
+### Optional Parallel web search
+
+Set `WEB_SEARCH_PROVIDER` to `"parallel"` in the `vars` object of your
+`wrangler.jsonc` (or `WEB_SEARCH_PROVIDER=parallel` in `.dev.vars` locally) to use
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp) for web
+research. It provides free search in Fast mode without a Parallel account or API
+key. Anonymous access has rate limits and is intended for exploration and light use.
+
+```jsonc
+"vars": {
+  "WEB_SEARCH_PROVIDER": "parallel"
+}
+```
+
+Parallel returns relevant page excerpts and source URLs to the existing research
+workflow without launching Browser Rendering for each search. User-provided source
+URLs still use the existing browser path. Leave the variable unset, or set it to
+`"duckduckgo"`, to use the existing DuckDuckGo and Browser Rendering provider.
+The web-browsing toggle, excluded domains and AutoRAG retain their existing
+behavior. Errors from a selected provider are recorded in research history;
+the workflow does not switch providers automatically.
+
 ## ✍️ Usage
 
 1. **Create a New Research:**
