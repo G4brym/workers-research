@@ -58,6 +58,7 @@ describe("Parallel MCP search", () => {
 				"workers-research/0.0.1",
 			);
 			expect(request.headers.has("Authorization")).toBe(false);
+			expect(request.redirect).toBe("manual");
 		}
 	});
 
@@ -107,6 +108,24 @@ describe("Parallel MCP search", () => {
 			parallelSearch("workers", 5, { sessionId, signal: controller.signal }),
 		).rejects.toThrow();
 		expect(caller).not.toHaveBeenCalled();
+	});
+
+	test.each([
+		302, 307,
+	])("rejects HTTP %s redirects without following them", async (status) => {
+		const fetcher = vi.fn(async (input, init) => {
+			expect(String(input)).toBe("https://search.parallel.ai/mcp");
+			expect(init.redirect).toBe("manual");
+			return new Response(null, {
+				status,
+				headers: { Location: "https://other.example/mcp" },
+			});
+		});
+		vi.stubGlobal("fetch", fetcher);
+		await expect(parallelSearch("workers", 5, { sessionId })).rejects.toThrow(
+			"redirects are not allowed",
+		);
+		expect(fetcher.mock.calls.length).toBeLessThanOrEqual(2);
 	});
 
 	test.each([

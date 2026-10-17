@@ -14,6 +14,7 @@ export function mockParallelMcp(
 		url: string;
 		method: string;
 		headers: Headers;
+		redirect?: RequestRedirect;
 		rpc?: { method: string; params?: Record<string, any>; id?: number };
 	}> = [];
 	const caller = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -23,6 +24,7 @@ export function mockParallelMcp(
 			url: String(input),
 			method,
 			headers: new Headers(init?.headers),
+			redirect: init?.redirect,
 			rpc,
 		});
 		if (method === "GET") return new Response(null, { status: 405 });

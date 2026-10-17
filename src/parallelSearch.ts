@@ -52,14 +52,20 @@ export async function parallelSearch(
 			type: "http",
 			url: PARALLEL_MCP_URL,
 			headers: { "User-Agent": USER_AGENT },
-			redirect: "error",
-			fetch: (input, init) =>
-				fetch(input, {
+			fetch: async (input, init) => {
+				const response = await fetch(input, {
 					...init,
+					// Workers supports manual redirects, but not redirect: "error".
+					redirect: "manual",
 					signal: init?.signal
 						? AbortSignal.any([signal, init.signal])
 						: signal,
-				}),
+				});
+				if (response.status >= 300 && response.status < 400) {
+					throw new Error("Parallel MCP redirects are not allowed");
+				}
+				return response;
+			},
 		},
 		initializationOptions: { signal },
 		maxRetries: 0,
